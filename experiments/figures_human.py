@@ -81,27 +81,62 @@ def fig_rgb_trajectories(subjects=(0, 8), task="Task1", n_labels=5):
 
 
 def fig_paired():
+    """Estimation plot: per-participant VR - 2D differences as % of the 2D mean, mean difference with its
+    90% CI (the interval used by TOST) and the +/-10% equivalence band, one row per metric."""
     subj = pd.read_csv(os.path.join(RESULTS, "human_subject_means.csv"))
     tests = pd.read_csv(os.path.join(RESULTS, "human_paired_tests.csv")).set_index("metric")
-    panels = [("cfs", "Cognitive Flow Score"), ("cfs_cv", "CFS variability (CV)"), ("optimality", "Jerk optimality"),
-              ("ldlj", "Smoothness (LDLJ)"), ("micro_deviation", "Micro-deviation (mm)"), ("path_efficiency", "Path efficiency")]
-    titles = [f"{lab}<br><sup>d<sub>z</sub> = {tests.loc[m].dz:.2f}, p = {tests.loc[m].p_t:.2f}</sup>" for m, lab in panels]
-    fig = make_subplots(rows=2, cols=3, subplot_titles=titles, vertical_spacing=0.16, horizontal_spacing=0.08)
-    for k, (m, _) in enumerate(panels):
-        r, c = k // 3 + 1, k % 3 + 1
-        w = subj.pivot(index="subject", columns="cond", values=m) * (1000 if m == "micro_deviation" else 1)
-        for _, row in w.iterrows():
-            fig.add_trace(go.Scatter(x=["2D", "VR"], y=[row.NVR, row.VR], mode="lines", line=dict(color=GRAY, width=1),
-                                     showlegend=False, hoverinfo="skip"), row=r, col=c)
-        fig.add_trace(go.Scatter(x=["2D"] * len(w), y=w.NVR, mode="markers", marker=dict(color=NVR, size=9),
-                                 name="2D / no haptics", showlegend=k == 0), row=r, col=c)
-        fig.add_trace(go.Scatter(x=["VR"] * len(w), y=w.VR, mode="markers", marker=dict(color=VR, size=9),
-                                 name="VR + haptics", showlegend=k == 0), row=r, col=c)
-        fig.add_trace(go.Scatter(x=["2D", "VR"], y=[w.NVR.mean(), w.VR.mean()], mode="lines+markers",
-                                 line=dict(color="black", width=4), marker=dict(size=12, color="black"),
-                                 name="mean", showlegend=k == 0), row=r, col=c)
-    style(fig, "Participant-level Metrics: VR + Haptics vs 2D", width=1300, height=850)
-    fig.update_layout(legend=dict(orientation="h", x=0.5, xanchor="center", y=-0.08))
+    rows = [("cfs", "Cognitive Flow Score"), ("cfs_cv", "CFS variability (CV)"), ("optimality", "Jerk optimality"),
+            ("ldlj", "Smoothness (LDLJ)"), ("micro_deviation", "Micro-deviation"), ("path_efficiency", "Path efficiency")]
+    XL, XR = -110, 150
+    fig = go.Figure()
+    fig.add_vrect(x0=-10, x1=10, fillcolor="rgba(0,204,150,0.16)", line_width=0, layer="below")
+    fig.add_vline(x=0, line=dict(color="#555", width=1.2))
+    rng = np.random.default_rng(0)
+    y_lab = []
+    for i, (m, lab) in enumerate(rows):
+        y = len(rows) - 1 - i
+        t = tests.loc[m]
+        w = subj.pivot(index="subject", columns="cond", values=m)
+        ref = abs(w.NVR.mean())
+        d = 100 * (w.VR - w.NVR) / ref
+        lo, hi, mu = 100 * t.ci90_lo / ref, 100 * t.ci90_hi / ref, 100 * t["diff"] / ref
+        if t.p_tost_10pct < 0.05:
+            verdict, col = "equivalent (TOST p < 0.001)" if t.p_tost_10pct < 0.001 else f"equivalent (TOST p = {t.p_tost_10pct:.3f})", GREEN
+        elif t.p_t < 0.05:
+            verdict, col = f"VR higher (p = {t.p_t:.2f} uncorrected, Holm p = {t.p_holm:.2f})", VR
+        elif t.p_t < 0.10:
+            verdict, col = (f"{'higher' if mu > 0 else 'lower'} in VR, not significant (p = {t.p_t:.2f}, Holm p = {t.p_holm:.2f})"), GRAY
+        else:
+            verdict, col = f"no difference (p = {t.p_t:.2f}, BF<sub>01</sub> = {t.BF01:.1f}); equivalence not established", GRAY
+        jit = y + rng.uniform(-0.17, 0.17, len(d))
+        inside = (d >= XL) & (d <= XR)
+        fig.add_trace(go.Scatter(x=d[inside], y=jit[inside.values], mode="markers", showlegend=i == 0,
+                                 name="individual participants", marker=dict(size=8, color="rgba(90,90,90,0.45)",
+                                                                             line=dict(width=0))))
+        if (~inside).any():   # values beyond the axis are pinned to the edge and labelled with their value
+            dx = d[~inside]
+            fig.add_trace(go.Scatter(x=np.clip(dx, XL + 4, XR - 4), y=y + np.linspace(-0.27, 0.27, len(dx)) if len(dx) > 1 else [y], mode="markers+text",
+                                     showlegend=False, text=[f"{v:.0f}%" for v in dx],
+                                     textposition=["middle right" if v < XL else "middle left" for v in dx],
+                                     textfont=dict(size=10, color="#777"),
+                                     marker=dict(size=10, color="rgba(90,90,90,0.55)",
+                                                 symbol=["triangle-left" if v < XL else "triangle-right" for v in dx])))
+        fig.add_trace(go.Scatter(x=[mu], y=[y], mode="markers", showlegend=i == 0, name="mean difference ± 90% CI",
+                                 marker=dict(size=16, color=col, symbol="diamond", line=dict(color="white", width=1.5)),
+                                 error_x=dict(type="data", symmetric=False, array=[hi - mu], arrayminus=[mu - lo],
+                                              thickness=3, width=8, color=col)))
+        fig.add_annotation(x=1.0, xref="paper", xanchor="left", y=y, text=f"  {verdict}", showarrow=False,
+                           font=dict(size=13, color=col if col != GRAY else "#666"))
+        y_lab.append((y, f"<b>{lab}</b><br><sup>d<sub>z</sub> = {t.dz:.2f}</sup>"))
+    fig.update_yaxes(tickvals=[v for v, _ in y_lab], ticktext=[l for _, l in y_lab], range=[-0.6, len(rows) - 0.4],
+                     showgrid=False, zeroline=False)
+    fig.update_xaxes(title_text="VR + haptics − 2D  (% of the 2D mean)", range=[XL, XR], zeroline=False,
+                     ticksuffix="%")
+    fig.add_annotation(x=0, y=len(rows) - 0.45, text="±10% equivalence band", showarrow=False, yanchor="bottom",
+                       font=dict(size=12, color="#00a37a"))
+    style(fig, "Participant-level differences between interfaces", width=1500, height=720)
+    fig.update_layout(margin=dict(l=210, r=470, t=90, b=70),
+                      legend=dict(orientation="h", x=0.5, xanchor="center", y=-0.14))
     save(fig, "fig_human_paired")
 
 
