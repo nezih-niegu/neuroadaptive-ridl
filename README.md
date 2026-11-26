@@ -4,7 +4,7 @@
 
 ![Visual abstract](docs/visual_abstract.png)
 
-This repository holds the code, derived results and manuscript source for the Frontiers in Systems Neuroscience article *Neuroadaptive Decision-Making AI for Immersive Surgical Robotics Training*, an extension of the MCC thesis *Neuroadaptive Decision-Making AI* (Tecnológico de Monterrey, 2025).
+This repository holds the code, derived results and manuscript source for the unpublished manuscript *Neuroadaptive Decision-Making AI for Immersive Surgical Robotics Training*, an extension of the MCC thesis *Neuroadaptive Decision-Making AI* (Tecnológico de Monterrey, 2025).
 
 Participants (N = 10) teleoperated a dVRK/AMBF simulator under two interfaces, within subject:
 
@@ -106,18 +106,6 @@ The Frontiers analyses keep the thesis architecture (RIDLPolicy: frozen SD-UNet,
 - **Feature caching.** Frozen-UNet features are cached. This is numerically identical to recomputing them and makes the ablation tractable on CPU.
 
 See `thesis/README.md` for the issues found in the original evaluation script.
-
-## Citation
-
-```bibtex
-@article{nietogutierrez_neuroadaptive_ridl,
-  title   = {Neuroadaptive Decision-Making AI for Immersive Surgical Robotics Training},
-  author  = {Nieto Guti{\'e}rrez, Nezih and Hern{\'a}ndez G{\'o}mez, Alejandro and De Los R{\'i}os Alatorre, Gustavo and
-             F{\'e}lix Arredondo, Felipe de Jes{\'u}s and Murra L{\'o}pez, Arturo Jos{\'e} and Mu{\~n}oz Ubando, Luis Alberto},
-  journal = {Frontiers in Systems Neuroscience},
-  note    = {under review}
-}
-```
 
 ## License
 
