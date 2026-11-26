@@ -1,7 +1,7 @@
 [project]
 name = "neuroadaptive-ridl"
 version = "0.1.0"
-description = "Cognitive equivalence of VR-haptic surgical teleoperation and a hierarchical diffusion-RL agent (RIDL) trained on EEG-annotated demonstrations"
+description = "Cognitive equivalence of VR-haptic surgical teleoperation and a hierarchical learning agent (RIDL) trained on EEG-annotated demonstrations"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

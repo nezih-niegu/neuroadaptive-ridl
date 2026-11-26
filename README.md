@@ -1,6 +1,6 @@
 # Neuroadaptive RIDL
 
-**Cognitive equivalence of VR–haptic surgical teleoperation, and a hierarchical diffusion–RL agent trained on EEG-annotated demonstrations.**
+**Cognitive equivalence of VR–haptic surgical teleoperation, and a hierarchical learning agent trained on EEG-annotated demonstrations.**
 
 ![Visual abstract](docs/visual_abstract.png)
 

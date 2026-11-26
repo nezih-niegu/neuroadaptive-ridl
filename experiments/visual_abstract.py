@@ -121,7 +121,7 @@ def main():
     text(fig, 0.0, 1.0, "<b>Does immersive VR–haptic surgical teleoperation leave the brain's decision-making "
                         "network undisturbed?</b>", size=25)
     text(fig, 0.0, 0.968, "Wearable EEG reads engagement from the decision network (Cognitive Flow Score, CFS); "
-                          "a hierarchical diffusion-RL agent (RIDL) learns from CFS-weighted demonstrations · "
+                          "a hierarchical learning agent (RIDL) learns from CFS-weighted demonstrations · "
                           "within-subject pilot, N = 10", size=14.5, color=INK2)
 
     # ---------------- neuroscience row
