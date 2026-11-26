@@ -13,9 +13,11 @@
 \usepackage[onehalfspacing]{setspace}
 \usepackage{amsmath,amssymb,amsfonts,amsthm,mathtools,bm}
 \usepackage{hyperref}
-\usepackage{graphicx,booktabs,multirow,enumitem,siunitx}
+\usepackage{graphicx,booktabs,multirow,siunitx}
 \usepackage{xcolor}
 \newcommand{\TODO}[1]{\textcolor{red}{[TODO: #1]}}
+% frontiers_suppmat.cls has no \keywords (it comes from the main Frontiers template)
+\providecommand{\keywords}[1]{\par\medskip\noindent\textbf{Keywords:} #1}
 \graphicspath{{../figures/}}
 \input{results_macros}
 
@@ -28,7 +30,6 @@
 % \author[1]{Nezih Nieto Guti\'errez$^{1,*}$}
 % \address{$^{1}$Robotics and Intelligent Interaction Systems Group, Tecnol\'ogico de Monterrey, Monterrey, Mexico}
 % \correspondance{*Nezih Nieto Guti\'errez\\ \url{nezih.nieto@tec.mx}}
-\extraAuth{}
 \maketitle
 
 % -----------------------------------------------------------------
@@ -44,7 +45,7 @@ Immersive interfaces for surgical-robotics training are usually justified by the
 
 Modern surgical robotics training requires mastery of perception, control and judgment under continuous cognitive load \cite{Haidegger2022,Riveiro-Moreno2023,Peters2018}. Trainees must integrate depth cues, stabilize fine motor actions and regulate applied forces while maintaining situational awareness \cite{Fujie2020,Fiorini2022}. Traditional curricula evaluate competence post hoc, focusing on observable outcomes rather than on the learner's internal engagement \cite{Attanasio2021,Vasey2023}.
 
-Wearable biosensors such as electroencephalography (EEG), eye tracking and heart-rate variability give continuous access to attentional and affective states \cite{10.3389/fnrgo.2022.1052411,Shafiei2023,Alcaide2021Focus}, and immersive technology---virtual reality (VR) and haptic simulation---enables safe, high-fidelity practice \cite{Munawar2023,Munawar2021,Alaker2016,Rangarajan2020}. Combining the two makes \textit{closed-loop}, learner-aware instruction possible \cite{Guger2009Brain,long2022,qian2019}. Immersive simulation has been associated with improved skill acquisition \cite{Mao2021,Gawęcki2020,9262701}, and haptic feedback increases simulator fidelity, particularly for novices \cite{hapticshci2,brugada2022}. At the same time, cognitive-load theory predicts that richer multisensory interfaces can also add extraneous load \cite{jining2021lost,Sokolowska2023-cz}. Before an embodied interface is used as the substrate for neuroadaptive tutoring, it is therefore necessary to establish that it does not degrade the very engagement signal the tutor will rely on.
+Wearable biosensors such as electroencephalography (EEG), eye tracking and heart-rate variability give continuous access to attentional and affective states \cite{10.3389/fnrgo.2022.1052411,Shafiei2023,Alcaide2021Focus}, and immersive technology---virtual reality (VR) and haptic simulation---enables safe, high-fidelity practice \cite{Munawar2023,Munawar2021,Alaker2016,Rangarajan2020}. Combining the two makes \textit{closed-loop}, learner-aware instruction possible \cite{Guger2009Brain,long2022,qian2019}. Immersive simulation has been associated with improved skill acquisition \cite{Mao2021,Gawecki2020,9262701}, and haptic feedback increases simulator fidelity, particularly for novices \cite{hapticshci2,brugada2022}. At the same time, cognitive-load theory predicts that richer multisensory interfaces can also add extraneous load \cite{jining2021lost,Sokolowska2023-cz}. Before an embodied interface is used as the substrate for neuroadaptive tutoring, it is therefore necessary to establish that it does not degrade the very engagement signal the tutor will rely on.
 
 Reinforcement learning (RL) for surgical robotics is attractive \cite{Zhang2021,Brunke2022,Kassahun2016,Andras2020}, but sample inefficiency limits deployment \cite{Barnoy2021,Xu2021}. Diffusion-based visuomotor policies and surgical robot transformers learn from demonstrations \cite{chi2023diffusion,kim2024srt}, raising the question of whether neurophysiological engagement recorded during demonstration can shape what an agent learns.
 
@@ -82,7 +83,7 @@ where $L_c(t)$ are LGAF-CNN class likelihoods for the participant's own EEG at 1
 
 \subsection{Behavioral Metrics}
 All metrics were computed from the 10\,Hz tool logs of Task~1 and Task~2 and averaged per participant and condition \cite{Varier2022,Chiu2021}:
-\begin{itemize}[leftmargin=1.5em]
+\begin{itemize}
 \item \textbf{Jerk optimality} $O_t=1-\widetilde{c}_t$, where $c_t$ is the mean absolute first difference of $\{y,f_x,f_y,f_z,\mathrm{roll},\mathrm{pitch},\mathrm{yaw}\}$ and $\widetilde{\cdot}$ denotes min--max normalization within the segment (as in the thesis reward).
 \item \textbf{Smoothness:} log dimensionless jerk (LDLJ) of the 3D tool path (higher is smoother).
 \item \textbf{Path efficiency:} the tool path was segmented into submovements at speed minima (speed below 20\% of the segment median); efficiency is the arc-length-weighted mean of chord/arc per submovement \cite{Jackson2013}.
@@ -146,7 +147,7 @@ Brain--computer interfaces and AI decision support point toward higher surgical 
 \subsection{Limitations}
 The sample is small ($N=10$), so equivalence for CFS could not be established and the exploratory path-efficiency effect needs replication. All participants performed VR before 2D; practice effects (favoring 2D) and fatigue (favoring VR) are confounded with interface, and a counterbalanced design is required. The virtualized $V_\beta/V_\alpha$ term is session-level, so CFS dynamics rely on the LGAF-CNN decoder, which was trained on a different cohort and task set (Nencki--Symfonia; 71\% accuracy) and transferred to 8-channel dry EEG recorded during movement \cite{Duvinage2013Performance}. Presence and body ownership were not measured with validated questionnaires. Agents were trained and tested on logged demonstrations in simulation; closed-loop deployment and transfer to physical dVRK hardware remain untested \cite{d2021accelerating,Matas2018}. Complementary biosignals (GSR, HRV, fNIRS) could strengthen engagement estimation \cite{Ban2022KernelFlow,Li2024Reduced,Melcer2018CTRLLabs}.
 
-Future work should use counterbalanced, larger cohorts with validated presence measures, closed-loop CFS-driven adaptation, and long-term retention and transfer studies \cite{Gawęcki2020}.
+Future work should use counterbalanced, larger cohorts with validated presence measures, closed-loop CFS-driven adaptation, and long-term retention and transfer studies \cite{Gawecki2020}.
 
 \section{Conclusion}
 A VR--haptic surgical-teleoperation interface preserved EEG-derived engagement and movement quality relative to a conventional display, and moment-to-moment engagement tracked movement optimality in both. These results support the use of immersive interfaces as the substrate for neuroadaptive, learner-aware training \cite{9262701,Feussner2017}. \TODO{one sentence on RIDL.}
@@ -197,15 +198,7 @@ The author declares no commercial or financial relationships that could be const
 \caption{\textbf{Participant-level engagement and movement quality.} Means over Task~1 and Task~2. CFS $=(V_\beta/V_\alpha)(L_{\mathrm{oddball}}/L_{\mathrm{rest}})$; path efficiency = submovement chord/arc; $O$ = jerk optimality; LDLJ = log dimensionless jerk (higher = smoother).}
 \vspace{0.5em}
 \small
-\begin{tabular}{lcccccccc}
-\toprule
-& \multicolumn{2}{c}{\textbf{CFS}} & \multicolumn{2}{c}{\textbf{Path efficiency}} & \multicolumn{2}{c}{\textbf{Optimality $O$}} & \multicolumn{2}{c}{\textbf{LDLJ}} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
-\textbf{Subject} & VR & 2D & VR & 2D & VR & 2D & VR & 2D \\
-\midrule
-\input{table_subjects}
-\bottomrule
-\end{tabular}
+\input{table_subjects}% complete tabular, generated by make_macros.py
 \label{tab:subjects}
 \end{table}
 
@@ -214,13 +207,7 @@ The author declares no commercial or financial relationships that could be const
 \caption{\textbf{RIDL ablation.} Subject-wise 5-fold cross-validation $\times$ 2 seeds $\times$ 2 demonstration sources; errors on held-out participants in both interfaces. Error = 3D position error of the 1\,s displacement (mean $\pm$ 95\% CI over runs); $E_{\mathrm{traj}}$ and $\sigma_r$ = Kalman-smoothed error and volatility (mm); NMSE over all nine action dimensions; steps = PPO environment interactions.}
 \vspace{0.5em}
 \small
-\begin{tabular}{lccccc}
-\toprule
-\textbf{Variant} & \textbf{Error (mm)} & $\bm{E_{\mathrm{traj}}}$ & $\bm{\sigma_r}$ & \textbf{NMSE} & \textbf{Steps} \\
-\midrule
-\IfFileExists{table_ablation.tex}{\input{table_ablation}}{\multicolumn{6}{c}{\TODO{generated by make\_macros.py}}\\}
-\bottomrule
-\end{tabular}
+\input{table_ablation}% complete tabular, generated by make_macros.py
 \label{tab:ablation}
 \end{table}
 

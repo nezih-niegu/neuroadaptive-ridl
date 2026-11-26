@@ -109,6 +109,19 @@ with open(OUT, "w") as f:
 print(f"wrote {len(M)} macros -> {OUT}")
 
 # ---------------- tables
+SUBJ_HEAD = r"""\begin{tabular}{lcccccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{CFS}} & \multicolumn{2}{c}{\textbf{Path efficiency}} & \multicolumn{2}{c}{\textbf{Optimality $O$}} & \multicolumn{2}{c}{\textbf{LDLJ}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+\textbf{Subject} & VR & 2D & VR & 2D & VR & 2D & VR & 2D \\
+\midrule
+"""
+ABL_HEAD = r"""\begin{tabular}{lccccc}
+\toprule
+\textbf{Variant} & \textbf{Error (mm)} & $\bm{E_{\mathrm{traj}}}$ & $\bm{\sigma_r}$ & \textbf{NMSE} & \textbf{Steps} \\
+\midrule
+"""
+TAIL = "\n\\bottomrule\n\\end{tabular}\n"
 subj = pd.read_csv(os.path.join(RESULTS, "human_subject_means.csv"))
 w = subj.pivot(index="subject", columns="cond", values=["cfs", "path_efficiency", "optimality", "ldlj"])
 lines = []
@@ -121,13 +134,14 @@ lines.append("\\midrule")
 lines.append("Mean (SD) & " + " & ".join(
     f"{m_[(a, c)]:.{k}f} ({sd_[(a, c)]:.{k}f})" for a, k in (("cfs", 2), ("path_efficiency", 2), ("optimality", 3), ("ldlj", 2))
     for c in ("VR", "NVR")) + " \\\\")
-open(os.path.join(PAPER, "table_subjects.tex"), "w").write("\n".join(lines) + "\n")
+open(os.path.join(PAPER, "table_subjects.tex"), "w").write(SUBJ_HEAD + "\n".join(lines) + TAIL)
 
+rows = ["\\multicolumn{6}{c}{\\TODO{ablation results pending (run\\_all.sh)}} \\\\"]
 if os.path.exists(abl):
     rows = []
     for v in s.index:
         steps = "--" if s.loc[v, "env_steps"] == 0 else f"{s.loc[v, 'env_steps']:,.0f}"
         rows.append(f"{v} & {s.loc[v,'err_mm']:.2f} $\\pm$ {s.loc[v,'err_mm_ci']:.2f} & {s.loc[v,'E_traj']:.2f} & "
                     f"{s.loc[v,'sigma_r']:.2f} & {s.loc[v,'nmse']:.3f} & {steps} \\\\")
-    open(os.path.join(PAPER, "table_ablation.tex"), "w").write("\n".join(rows) + "\n")
+open(os.path.join(PAPER, "table_ablation.tex"), "w").write(ABL_HEAD + "\n".join(rows) + TAIL)
 print("tables written")
