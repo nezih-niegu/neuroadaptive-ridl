@@ -10,6 +10,10 @@ import plotly.io as pio
 from common import FIGS
 
 pio.templates.default = "plotly"
+try:  # stop Kaleido stamping "Loading [MathJax]/extensions/MathMenu.js" into exported PDFs
+    pio.kaleido.scope.mathjax = None
+except AttributeError:  # kaleido >= 1.0 has no MathJax scope
+    pass
 VR, NVR, GREEN, GRAY = "#636EFA", "#EF553B", "#00CC96", "#9e9e9e"   # Plotly default cycle
 FONT = dict(family="Arial, Helvetica, sans-serif", size=14, color="#2a3f5f")
 

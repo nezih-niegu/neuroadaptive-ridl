@@ -16,7 +16,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from common import FIGS, RESULTS
+from common import FIGS, PAPER, RESULTS
 from pstyle import GRAY, NVR, VR, save, style
 
 TRUE_C, PPO_C, RIDL_C = "white", "red", "#3f7bff"
@@ -57,7 +57,7 @@ def _vis2_traces(fig, row, key, ridl, ppo, n=None, legend=True):
 
 def fig_vis2(src="VR", fold=4, ridl_v="RIDL (full)", ppo_v="PPO from scratch", task="Task1"):
     ridl, ppo = np.load(tfile(ridl_v, src, fold)), np.load(tfile(ppo_v, src, fold))
-    keys = sorted({k.rsplit("__", 1)[0] for k in ridl.files if task in k})
+    keys = sorted({k.rsplit("__", 1)[0] for k in ridl.files if task in k})[:2]  # first two held-out recordings
     fig = make_subplots(rows=len(keys), cols=2, column_widths=[0.55, 0.45], horizontal_spacing=0.06,
                         vertical_spacing=0.08, specs=[[{"type": "scene"}, {"type": "xy"}]] * len(keys),
                         subplot_titles=[t for k in keys for t in (
@@ -151,6 +151,12 @@ def fig_crossdomain(tag="ablation", variant="RIDL (full)"):
     fig.update_yaxes(autorange="reversed", title="Training demonstrations"); fig.update_xaxes(title="Test condition")
     style(fig, f"Train × Test Condition ({variant})", width=650, height=520)
     save(fig, f"fig_crossdomain_{tag}")
+    lab = {"VR": "VR+haptics", "NVR": "2D"}
+    rows = [f"{lab[a]} demonstrations & " + " & ".join(f"{M.loc[a, b]:.2f} $\\pm$ {S.loc[a, b]:.2f}" for b in ["VR", "NVR"]) + " \\\\"
+            for a in ["VR", "NVR"]]
+    tex = ("\\begin{tabular}{lcc}\n\\toprule\n\\textbf{Trained on} & \\textbf{Tested on VR+haptics} & \\textbf{Tested on 2D} \\\\\n\\midrule\n"
+           + "\n".join(rows) + "\n\\bottomrule\n\\end{tabular}\n")
+    open(os.path.join(PAPER, "table_crossdomain.tex"), "w").write(tex)
     return M
 
 
