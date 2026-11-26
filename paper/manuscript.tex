@@ -413,7 +413,7 @@ Two variants were more accurate than full RIDL in position error: behavior cloni
 Because the two interfaces produced equivalent movement quality, demonstrations recorded in either one were expected to train comparable agents. Full RIDL trained on VR+haptics demonstrations reached \srcVR{}\,mm on held-out participants, and RIDL trained on 2D demonstrations reached \srcNVR{}\,mm (difference $\srcDiff{}$\,mm, 90\% CI [\srcCIlo, \srcCIhi], $p\srcP$). The difference was not significant, but equivalence within $\pm$10\% could not be shown (TOST $p\srcTost$) because run-to-run variability exceeded the margin. Agents trained on VR demonstrations had the lowest error on both test interfaces (Table~\ref{tab:crossdomain}); 2D demonstrations therefore did not transfer better to 2D test data than VR demonstrations did.
 
 \subsection{Sample Efficiency}
-The imitation prior is expected to make reinforcement learning more sample-efficient. Over \cSteps{} PPO environment steps (VR demonstrations, 5 folds $\times$ 2 seeds), neither agent improved markedly on its starting point (Figure~\ref{fig:curves}). RIDL started from the imitation prior at a held-out NMSE of \cRidlFirst{} after the first update and ended at \cRidlFinal{}. Its learning curve jumped each time the curriculum moved on to the next participant (about every 4,600 steps), showing that PPO partly overwrote the prior instead of refining it. PPO from scratch started lowest (\cPpoFirst{}), because a freshly initialized Gaussian head predicts a near-zero displacement and thus behaves like the hold predictor, and it degraded steadily to \cPpoFinal{}. RIDL's curve fluctuated around that of PPO from scratch and ended below it (\cRidlFinal{} vs.\ \cPpoFinal{}), so the imitation prior kept the policy in a better region than random initialization; a clear sample-efficiency advantage, however, will only become measurable with more demonstrations per participant.
+The imitation prior is expected to make reinforcement learning more sample-efficient. Over \cSteps{} PPO environment steps (VR demonstrations, 5 folds $\times$ 2 seeds), neither agent improved markedly on its starting point. RIDL started from the imitation prior at a held-out NMSE of \cRidlFirst{} after the first update and ended at \cRidlFinal{}. Its learning curve jumped each time the curriculum moved on to the next participant (about every 4,600 steps), showing that PPO partly overwrote the prior instead of refining it. PPO from scratch started lowest (\cPpoFirst{}), because a freshly initialized Gaussian head predicts a near-zero displacement and thus behaves like the hold predictor, and it degraded steadily to \cPpoFinal{}. RIDL's curve fluctuated around that of PPO from scratch and ended below it (\cRidlFinal{} vs.\ \cPpoFinal{}), so the imitation prior kept the policy in a better region than random initialization; a clear sample-efficiency advantage, however, will only become measurable with more demonstrations per participant.
 
 % =================================================================
 \section{Discussion}
@@ -512,12 +512,6 @@ The authors declare no commercial or financial relationships that could be const
 \label{fig:kalman}
 \end{figure}
 
-\begin{figure}[h!]
-\centering
-\figfile{fig_learning_curves.pdf}{0.55}
-\caption{\textbf{Sample efficiency.} Held-out normalized MSE vs.\ PPO environment steps for RIDL (imitation prior + PPO) and PPO from scratch (mean $\pm$ 95\% CI).}
-\label{fig:curves}
-\end{figure}
 
 \clearpage
 \section*{Tables}
