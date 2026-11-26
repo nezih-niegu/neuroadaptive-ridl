@@ -1,41 +1,29 @@
-"""Graphical abstract: pipeline schematic + real-data findings.
-
-Renders docs/visual_abstract.{png,pdf} (and a copy in figures/). The RIDL panel
-shows the ablation if results/ablation_summary.csv exists, otherwise a
-schematic of the hierarchical agent only.
-"""
+"""Graphical abstract in Plotly: pipeline schematic + real-data findings.
+Renders docs/visual_abstract.{png,pdf} (and figures/visual_abstract.png). Panel D shows
+the RIDL ablation once results/ablation_summary.csv exists."""
 import json
 import os
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from common import FIGS, RESULTS, ROOT
+from pstyle import FONT, GRAY, GREEN, NVR, VR
 
-INK, INK2, GRID, PANEL = "#191919", "#5f5f5f", "#e9e9e9", "#f6f7f9"
-BLUE, ORANGE, AQUA, VIOLET = "#257de0", "#f47230", "#00b894", "#6a4ce2"
-plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 9, "axes.edgecolor": "#bdbdbd",
-                     "xtick.color": INK2, "ytick.color": INK2, "axes.labelcolor": INK})
-
-
-def box(fig, x, y, w, h, title, body, accent):
-    ax = fig.add_axes([x, y, w, h]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-    ax.add_patch(FancyBboxPatch((0.01, 0.02), 0.98, 0.96, boxstyle="round,pad=0,rounding_size=0.06",
-                                fc=PANEL, ec="#d9dce1", lw=1))
-    ax.add_patch(FancyBboxPatch((0.01, 0.84), 0.98, 0.14, boxstyle="round,pad=0,rounding_size=0.06",
-                                fc=accent, ec="none"))
-    ax.text(0.5, 0.91, title, ha="center", va="center", color="white", fontsize=9.5, weight="bold")
-    ax.text(0.06, 0.74, body, ha="left", va="top", color=INK, fontsize=8, linespacing=1.45)
-    return ax
-
-
-def arrow(fig, x0, x1, y):
-    fig.patches.append(FancyArrowPatch((x0, y), (x1, y), transform=fig.transFigure, arrowstyle="-|>",
-                                       mutation_scale=14, lw=1.6, color="#9aa0a6"))
+INK, INK2 = "#191919", "#5f5f5f"
+BOX = [("1  Embodied teleoperation", "#636EFA",
+        "dVRK / AMBF simulator<br>• VR: Meta Quest 3 stereo +<br>   Novint Falcon force feedback<br>"
+        "• 2D: monitor, no haptics<br>Reference · Task 1 · Task 2"),
+       ("2  Wearable EEG → CFS", "#AB63FA",
+        "8-ch dry Enobio, 500 Hz<br>LGAF-CNN (Gramian angular<br>field) engagement decoder<br>"
+        "CFS(t) = V<sub>β</sub>/V<sub>α</sub> · L<sub>oddball</sub>(t)/L<sub>rest</sub>(t)"),
+       ("3  Multimodal demonstrations", "#00CC96",
+        "endoscope frames (64×64)<br>+ tool pose & force (10 Hz)<br>+ CFS(t), jerk optimality<br>→ 1 s action chunks"),
+       ("4  Hierarchical RIDL agent", "#FFA15A",
+        "L1 skill prior: behaviour cloning<br>   frozen Stable-Diffusion UNet<br>   + Transformer kinematics<br>"
+        "L2 refinement: PPO on a<br>   CFS-weighted reward<br>subject-by-subject curriculum")]
 
 
 def main():
@@ -43,121 +31,114 @@ def main():
     tests = pd.read_csv(os.path.join(RESULTS, "human_paired_tests.csv")).set_index("metric")
     mm = json.load(open(os.path.join(RESULTS, "human_models.json")))
     win = pd.read_csv(os.path.join(RESULTS, "human_windows.csv"))
+    abl = os.path.join(RESULTS, "ablation_summary.csv")
+    has_abl = os.path.exists(abl)
 
-    fig = plt.figure(figsize=(13.33, 7.5), facecolor="white")
-    fig.text(0.03, 0.955, "Is immersive VR–haptic surgical teleoperation cognitively transparent?",
-             fontsize=17, weight="bold", color=INK)
-    fig.text(0.03, 0.915, "Wearable-EEG Cognitive Flow Score (CFS) and a hierarchical diffusion-RL agent (RIDL) "
-             "on dVRK teleoperation · within-subject pilot, N = 10", fontsize=10.5, color=INK2)
+    tc, o_, rs_ = tests.loc["cfs"], mm["mixed"]["opt"], mm["mixed"]["opt_robustness"]["random_slope"]
+    fig = make_subplots(rows=1, cols=4, column_widths=[0.31, 0.19, 0.25, 0.25], horizontal_spacing=0.075,
+                        subplot_titles=[
+        "<b>A  VR vs 2D: equivalence</b><br><sup>VR − 2D as % of the 2D mean, 90% CI; green band = ±10%</sup>",
+        f"<b>B  Engagement preserved</b><br><sup>d<sub>z</sub> = {tc.dz:.2f}, p = {tc.p_t:.2f}, BF<sub>01</sub> = {tc.BF01:.1f}</sup>",
+        f"<b>C  Engagement tracks control</b><br><sup>β = {o_['beta']:.2f}, p = {o_['p']:.3f}; random-slope p = {rs_['p']:.2f}</sup>",
+        "<b>D  RIDL ablation</b><br><sup>held-out position error, mean ± 95% CI</sup>"])
+    fig.update_layout(width=1600, height=900, paper_bgcolor="white", font=FONT, template="plotly",
+                      margin=dict(l=40, r=30, t=30, b=40), showlegend=False)
+    for ax in ("yaxis", "yaxis2", "yaxis3", "yaxis4"):
+        fig.layout[ax].domain = [0.06, 0.50]
+    for a in fig.layout.annotations:
+        a.update(y=0.535, font=dict(size=16, color=INK), xanchor="center", yanchor="bottom")
 
-    # ---------------- pipeline row
-    y, h, w = 0.665, 0.205, 0.215
-    xs = [0.03, 0.272, 0.514, 0.756]
-    box(fig, xs[0], y, w, h, "1  Embodied teleoperation",
-        "dVRK / AMBF simulator\n• VR: Meta Quest 3 stereo +\n   Novint Falcon force feedback\n• 2D: monitor, no haptics\n"
-        "Reference · Task 1 · Task 2", BLUE)
-    box(fig, xs[1], y, w, h, "2  Wearable EEG → CFS",
-        "8-ch dry Enobio, 500 Hz\nLGAF-CNN (Gramian angular\nfield) engagement decoder\n"
-        r"$\mathrm{CFS}(t)=\frac{V_\beta}{V_\alpha}\cdot\frac{L_{oddball}(t)}{L_{rest}(t)}$", VIOLET)
-    box(fig, xs[2], y, w, h, "3  Multimodal demonstrations",
-        "endoscope frames (64×64)\n+ tool pose & force (10 Hz)\n+ CFS(t), jerk optimality\n"
-        "→ 1 s action chunks", AQUA)
-    box(fig, xs[3], y, w, h, "4  Hierarchical RIDL agent",
-        "L1 skill prior: behaviour cloning\n    frozen Stable-Diffusion UNet\n    + Transformer kinematics\n"
-        "L2 refinement: PPO on a\n    CFS-weighted reward\nsubject-by-subject curriculum", ORANGE)
-    for a, b in zip(xs[:-1], xs[1:]):
-        arrow(fig, a + w + 0.003, b - 0.003, y + h / 2)
+    # ---- title + pipeline row (paper coordinates)
+    fig.add_annotation(x=0.0, y=1.0, xref="paper", yref="paper", xanchor="left", yanchor="top", showarrow=False,
+                       text="<b>Is immersive VR–haptic surgical teleoperation cognitively transparent?</b>",
+                       font=dict(size=26, color=INK))
+    fig.add_annotation(x=0.0, y=0.945, xref="paper", yref="paper", xanchor="left", yanchor="top", showarrow=False,
+                       text="Wearable-EEG Cognitive Flow Score (CFS) and a hierarchical diffusion-RL agent (RIDL) "
+                            "on dVRK teleoperation · within-subject pilot, N = 10", font=dict(size=15, color=INK2))
+    w, gap, y0, y1 = 0.228, 0.029, 0.685, 0.885
+    for i, (title, col, body) in enumerate(BOX):
+        x0 = i * (w + gap)
+        fig.add_shape(type="rect", xref="paper", yref="paper", x0=x0, x1=x0 + w, y0=y0, y1=y1,
+                      fillcolor="#f6f7f9", line=dict(color="#d9dce1"))
+        fig.add_shape(type="rect", xref="paper", yref="paper", x0=x0, x1=x0 + w, y0=y1 - 0.045, y1=y1,
+                      fillcolor=col, line=dict(color=col))
+        fig.add_annotation(x=x0 + w / 2, y=y1 - 0.0225, xref="paper", yref="paper", text=f"<b>{title}</b>",
+                           xanchor="center", yanchor="middle", showarrow=False, font=dict(size=15, color="white"))
+        fig.add_annotation(x=x0 + 0.012, y=y1 - 0.06, xref="paper", yref="paper", text=body, align="left",
+                           xanchor="left", yanchor="top", showarrow=False, font=dict(size=13.5, color=INK))
+        if i < 3:
+            fig.add_annotation(x=x0 + w + gap - 0.003, y=(y0 + y1) / 2, ax=-int((gap - 0.008) * 1600), ay=0,
+                               xref="paper", yref="paper", axref="pixel", ayref="pixel", text="", showarrow=True,
+                               arrowhead=2, arrowsize=1.4, arrowwidth=2, arrowcolor="#9aa0a6")
+    fig.add_annotation(x=0.0, y=0.635, xref="paper", yref="paper", xanchor="left", showarrow=False,
+                       text="<b>Findings</b>", font=dict(size=19, color=INK))
 
-    # ---------------- findings row
-    fy, fh = 0.085, 0.43
-    fig.text(0.03, 0.585, "Findings", fontsize=12, weight="bold", color=INK)
-
-    # A: equivalence forest
-    ax = fig.add_axes([0.125, fy, 0.20, fh])
+    # ---- A: equivalence forest (90% CI of VR-2D, % of 2D mean)
     rows = [("cfs", "Engagement (CFS)"), ("optimality", "Jerk optimality"), ("ldlj", "Smoothness (LDLJ)"),
-            ("micro_deviation", "Micro-deviation"), ("path_efficiency", "Path efficiency")]
-    ax.axvspan(-10, 10, color="#e6f4ee", lw=0)
-    ax.axvline(0, color=INK2, lw=0.8)
-    for i, (m, lab) in enumerate(rows[::-1]):
-        r = tests.loc[m]
-        base = abs(r.mean_nvr)
+            ("micro_deviation", "Micro-deviation"), ("path_efficiency", "Path efficiency")][::-1]
+    fig.add_vrect(x0=-10, x1=10, fillcolor="rgba(0,204,150,0.22)", line_width=0, layer="below", row=1, col=1)
+    for lab_i, (m, lab) in enumerate(rows):
+        r = tests.loc[m]; base = abs(r.mean_nvr)
         lo, hi, mid = 100 * r.ci90_lo / base, 100 * r.ci90_hi / base, 100 * r["diff"] / base
         eq = r.p_tost_10pct < 0.05
-        col = AQUA if eq else (BLUE if lo > 0 or hi < 0 else INK2)
-        ax.plot([lo, hi], [i, i], color=col, lw=2.4, solid_capstyle="round")
-        ax.plot(mid, i, "o", color=col, ms=6, mec="white", mew=1)
+        col = GREEN if eq else (VR if lo > 0 or hi < 0 else GRAY)
         tag = "equivalent" if eq else ("VR higher (uncorr.)" if lo > 0 else "inconclusive")
-        ax.text(-95, i - 0.32, tag, va="center", ha="right", fontsize=6.8, color=col, clip_on=False)
-    ax.set_xlim(-90, 75); ax.set_ylim(-0.7, len(rows) - 0.3)
-    ax.set_yticks(range(len(rows))); ax.set_yticklabels([l for _, l in rows[::-1]], fontsize=8, color=INK)
-    ax.tick_params(axis="y", length=0, pad=4)
-    ax.set_xticks([-75, -50, -25, 0, 25, 50, 75])
-    ax.set_xlabel("VR − 2D, % of 2D mean (90% CI)")
-    ax.spines[["top", "right", "left"]].set_visible(False)
-    ax.set_title("A  VR vs 2D: equivalence", loc="left", fontsize=10, weight="bold", color=INK)
-    ax.text(12, len(rows) - 0.5, "±10% band", ha="left", fontsize=7, color="#2f8f6b")
+        fig.add_trace(go.Scatter(x=[mid], y=[lab], mode="markers", marker=dict(size=12, color=col),
+                                 error_x=dict(type="data", symmetric=False, array=[hi - mid], arrayminus=[mid - lo],
+                                              color=col, thickness=3, width=0)), row=1, col=1)
+        fig.add_annotation(x=74, y=lab, text=tag, showarrow=False, xanchor="right", yshift=-14,
+                           font=dict(size=11, color=col), row=1, col=1)
+    fig.add_vline(x=0, line_color=INK2, line_width=1, row=1, col=1)
+    fig.update_xaxes(range=[-90, 76], title_text="% of 2D mean", row=1, col=1)
 
-    # B: paired CFS
-    ax = fig.add_axes([0.41, fy, 0.15, fh])
-    w_ = subj.pivot(index="subject", columns="cond", values="cfs")
-    for _, r in w_.iterrows():
-        ax.plot([0, 1], [r.NVR, r.VR], color="#c4c4c4", lw=0.9)
-    ax.scatter(np.zeros(len(w_)), w_.NVR, s=26, color=ORANGE, edgecolor="white", zorder=3)
-    ax.scatter(np.ones(len(w_)), w_.VR, s=26, color=BLUE, edgecolor="white", zorder=3)
-    t = tests.loc["cfs"]
-    ax.set_xticks([0, 1]); ax.set_xticklabels(["2D", "VR + haptics"]); ax.set_xlim(-0.4, 1.4)
-    ax.set_ylabel("Mean CFS per participant"); ax.grid(axis="y", color=GRID)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.set_title("B  Engagement preserved\n", loc="left", fontsize=10, weight="bold", color=INK)
-    ax.text(0.0, 1.0, f"$d_z$ = {t.dz:.2f}, p = {t.p_t:.2f}, BF$_{{01}}$ = {t.BF01:.1f}", transform=ax.transAxes,
-            ha="left", va="bottom", fontsize=7.5, color=INK2)
+    # ---- B: paired CFS
+    wv = subj.pivot(index="subject", columns="cond", values="cfs")
+    for _, r in wv.iterrows():
+        fig.add_trace(go.Scatter(x=["2D", "VR + haptics"], y=[r.NVR, r.VR], mode="lines",
+                                 line=dict(color="#c4c4c4", width=1)), row=1, col=2)
+    fig.add_trace(go.Scatter(x=["2D"] * len(wv), y=wv.NVR, mode="markers", marker=dict(color=NVR, size=10)), row=1, col=2)
+    fig.add_trace(go.Scatter(x=["VR + haptics"] * len(wv), y=wv.VR, mode="markers", marker=dict(color=VR, size=10)),
+                  row=1, col=2)
+    fig.update_yaxes(title_text="Mean CFS per participant", row=1, col=2)
 
-    # C: CFS -> optimality
-    ax = fig.add_axes([0.625, fy, 0.16, fh])
-    lo, hi = win.cfs.quantile([0.02, 0.98])
-    ww = win[(win.cfs >= lo) & (win.cfs <= hi)]
-    ax.scatter(ww.cfs, ww.opt, s=5, color=VIOLET, alpha=0.25, edgecolor="none")
+    # ---- C: CFS -> optimality
+    lo, hi = win.cfs.quantile([0.02, 0.98]); ww = win[(win.cfs >= lo) & (win.cfs <= hi)]
+    fig.add_trace(go.Scatter(x=ww.cfs, y=ww.opt, mode="markers", marker=dict(color="#AB63FA", size=4, opacity=0.3)),
+                  row=1, col=3)
     for _, g in ww.groupby("subject"):
-        if g.cfs.std() > 0:
-            b = np.polyfit(g.cfs, g.opt, 1); x_ = np.linspace(*g.cfs.quantile([0.1, 0.9]), 5)
-            ax.plot(x_, np.polyval(b, x_), color=INK, lw=0.8, alpha=0.55)
-    o = mm["mixed"]["opt"]
-    ax.set_xlabel("Windowed CFS (5 s)"); ax.set_ylabel("Jerk optimality"); ax.grid(color=GRID)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.set_title("C  Engagement tracks control\n", loc="left", fontsize=10, weight="bold", color=INK)
-    rs = mm["mixed"]["opt_robustness"]["random_slope"]
-    ax.text(0.0, 1.0, f"β = {o['beta']:.2f}, p = {o['p']:.3f}; random-slope p = {rs['p']:.2f}",
-            transform=ax.transAxes, ha="left", va="bottom", fontsize=7.5, color=INK2)
+        b = np.polyfit(g.cfs, g.opt, 1); x_ = np.linspace(*g.cfs.quantile([0.1, 0.9]), 5)
+        fig.add_trace(go.Scatter(x=x_, y=np.polyval(b, x_), mode="lines", line=dict(color=INK, width=1), opacity=0.6),
+                      row=1, col=3)
+    o, rs = mm["mixed"]["opt"], mm["mixed"]["opt_robustness"]["random_slope"]
+    fig.update_xaxes(title_text="Windowed CFS (5 s)", row=1, col=3)
+    fig.update_yaxes(title_text="Jerk optimality", row=1, col=3)
 
-    # D: RIDL ablation (if available)
-    ax = fig.add_axes([0.835, fy, 0.135, fh])
-    abl = os.path.join(RESULTS, "ablation_summary.csv")
-    ax.set_title("D  RIDL ablation", loc="left", fontsize=10, weight="bold", color=INK)
-    if os.path.exists(abl):
+    # ---- D: ablation (if available)
+    if has_abl:
         s = pd.read_csv(abl, index_col=0)
-        keep = [v for v in ["RIDL (full)", "BC only", "PPO from scratch", "Raw pixels (no SD prior)",
-                            "w/o flow-weighted reward", "Hold-position baseline"] if v in s.index]
+        keep = [v for v in ["Hold-position baseline", "w/o flow-weighted reward", "Raw pixels (no SD prior)",
+                            "PPO from scratch", "BC only", "RIDL (full)"] if v in s.index]
         s = s.loc[keep]
-        yy = np.arange(len(s))[::-1]
-        cols = [ORANGE if v == "RIDL (full)" else ("#c9c9c9" if "baseline" in v else "#f6b48f") for v in s.index]
-        ax.barh(yy, s.err_mm, xerr=s.err_mm_ci, color=cols, height=0.6, error_kw=dict(lw=0.8, ecolor=INK2))
-        ax.set_yticks(yy); ax.set_yticklabels([v.replace(" (", "\n(") for v in s.index], fontsize=6.8)
-        ax.set_xlabel("Held-out error (mm)"); ax.grid(axis="x", color=GRID)
-        ax.spines[["top", "right"]].set_visible(False)
+        fig.add_trace(go.Bar(y=list(s.index), x=s.err_mm, orientation="h",
+                             marker_color=["#FFA15A" if v == "RIDL (full)" else (GRAY if "baseline" in v else "#ffd0ab")
+                                           for v in s.index],
+                             error_x=dict(type="data", array=s.err_mm_ci, color=INK2)), row=1, col=4)
+        fig.update_xaxes(title_text="Held-out error (mm)", row=1, col=4)
     else:
-        ax.axis("off")
-        ax.text(0.02, 0.85, "Subject-wise 5-fold CV\n× VR / 2D demonstrations\n\nablates: imitation prior,\nPPO refinement, SD prior,\n"
-                "CFS reward & input,\nsubject curriculum\n\n(results pending)", va="top", fontsize=8, color=INK2)
+        fig.update_xaxes(visible=False, row=1, col=4); fig.update_yaxes(visible=False, row=1, col=4)
+        d4 = fig.layout.xaxis4.domain
+        fig.add_annotation(x=(d4[0] + d4[1]) / 2, y=0.28, xref="paper", yref="paper", showarrow=False, align="left",
+                           text="Subject-wise 5-fold CV<br>× VR / 2D demonstrations<br><br>ablates: imitation prior,<br>"
+                                "PPO refinement, SD prior,<br>CFS reward & input,<br>subject curriculum<br><br>(results pending)",
+                           font=dict(size=13, color=INK2))
+    fig.add_annotation(x=0.0, y=-0.035, xref="paper", yref="paper", xanchor="left", showarrow=False,
+                       text="VR always preceded 2D (order not counterbalanced); N = 10 pilot. Statistics: paired t / "
+                            "Wilcoxon, TOST (±10%), JZS Bayes factors, linear mixed models.", font=dict(size=11.5, color=INK2))
 
-    fig.text(0.03, 0.012, "VR always preceded 2D (order not counterbalanced); N = 10 pilot. "
-             "Statistics: paired t / Wilcoxon, TOST (±10%), JZS Bayes factors, linear mixed models.",
-             fontsize=7.5, color=INK2)
-
-    out = os.path.join(ROOT, "docs")
-    os.makedirs(out, exist_ok=True)
-    for d in (out, FIGS):
-        fig.savefig(os.path.join(d, "visual_abstract.png"), dpi=200)
-    fig.savefig(os.path.join(out, "visual_abstract.pdf"))
+    out = os.path.join(ROOT, "docs"); os.makedirs(out, exist_ok=True)
+    fig.write_image(os.path.join(out, "visual_abstract.png"), scale=2)
+    fig.write_image(os.path.join(out, "visual_abstract.pdf"))
+    fig.write_image(os.path.join(FIGS, "visual_abstract.png"), scale=2)
     print("ok")
 
 

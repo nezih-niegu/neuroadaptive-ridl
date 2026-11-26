@@ -1,143 +1,154 @@
-"""Human-data figures (thesis visual language: RGB flow/optimality encoding)."""
+"""Human-data and setup figures, all in Plotly (thesis-notebook visual language).
+
+fig1_setup              composite of thesis artwork (photo, system diagram, EEG montage)
+fig_human_paired        participant-level VR vs 2D metrics
+fig3_ridl               composite of thesis RIDL diagrams
+fig4a_rgb_trajectories  visualsThesis.ipynb 3D trajectory: RGB = (1-F, F, O), "Reward:" labels
+fig4b_cfs_quality       windowed CFS vs jerk optimality + within-subject median split
+fig_lgaf_confusion      LGAF-CNN confusion matrix (Blues, counts)
+"""
 import json
 import os
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from common import FIGS, RESULTS, load_lgaf, optimality
+from pstyle import GRAY, GREEN, NVR, VR, add_image, save, style
 
-BLUE, ORANGE, GRAY, INK, INK2 = "#257de0", "#f47230", "#9a9a9a", "#191919", "#666666"
-plt.rcParams.update({"font.size": 9, "axes.edgecolor": "#bbbbbb", "axes.labelcolor": INK,
-                     "xtick.color": INK2, "ytick.color": INK2, "axes.spines.top": False,
-                     "axes.spines.right": False, "savefig.dpi": 300, "font.family": "DejaVu Sans"})
+ART = os.path.join(FIGS, "thesis_art")
 
 
-def save(fig, name):
-    os.makedirs(FIGS, exist_ok=True)
-    for ext in ("png", "pdf"):
-        fig.savefig(os.path.join(FIGS, f"{name}.{ext}"), bbox_inches="tight")
-    plt.close(fig)
+def fig_setup():
+    fig = go.Figure()
+    add_image(fig, os.path.join(ART, "setup_photo.png"), 0.0, 0.55, 0.47, 0.42, "A")
+    add_image(fig, os.path.join(ART, "eeg_montage.png"), 0.07, 0.0, 0.33, 0.50, "C")
+    add_image(fig, os.path.join(ART, "system_diagram.png"), 0.49, 0.0, 0.51, 0.97, "B")
+    fig.update_xaxes(visible=False); fig.update_yaxes(visible=False)
+    style(fig, width=1500, height=930).update_layout(margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white")
+    save(fig, "fig1_setup")
 
 
-def rgb_traj(ax, d, title):
-    """Thesis Fig. 4.6 encoding: colour = (1-F, F, O), F min-max scaled per panel."""
-    p = d[["x", "y", "z"]].to_numpy(float) * 1000
-    F = d.F.to_numpy(float)
-    Fn = (np.argsort(np.argsort(F)) + 0.5) / len(F)      # within-segment percentile of CFS
-    O = optimality(d)
-    O = (np.argsort(np.argsort(O)) + 0.5) / len(O)       # percentile of jerk-optimality
-    col = np.stack([1 - Fn, Fn, O], 1).clip(0, 1)
-    ax.plot(*p.T, color="#444444", lw=0.5, alpha=0.6)
-    ax.scatter(*p.T, c=col, s=7, depthshade=False, edgecolors="none")
-    ax.set_title(title, fontsize=9, color=INK)
-    ax.set_xlabel("x (mm)", labelpad=-2); ax.set_ylabel("y (mm)", labelpad=-2); ax.set_zlabel("z (mm)", labelpad=-2)
-    ax.tick_params(labelsize=6, pad=-2)
-    for a in (ax.xaxis, ax.yaxis, ax.zaxis):
-        a.pane.set_facecolor((0.97, 0.97, 0.97, 1))
+def fig_ridl():
+    fig = go.Figure()
+    add_image(fig, os.path.join(ART, "ridl_ambf.png"), 0.0, 0.0, 0.56, 0.94, "A")
+    add_image(fig, os.path.join(ART, "ridl_training_loop.png"), 0.58, 0.0, 0.42, 0.94, "B")
+    fig.update_xaxes(visible=False); fig.update_yaxes(visible=False)
+    style(fig, width=1600, height=680).update_layout(margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white")
+    save(fig, "fig3_ridl")
 
 
-def fig_rgb_trajectories(subjects=(0, 8)):
-    fig = plt.figure(figsize=(7.2, 3.4 * len(subjects)))
-    k = 1
-    for s in subjects:
-        for c in ("VR", "NVR"):
-            for g in ("Task1",):
-                ax = fig.add_subplot(len(subjects), 2, k, projection="3d"); k += 1
-                rgb_traj(ax, load_lgaf(s, c, g), f"Subject {s} · {g} · {c}")
-    fig.text(0.5, 0.0, "Colour = (R, G, B) = (1 − F̂, F̂, Ô), percentile-scaled within segment:  green = high CFS, red = low CFS, "
-             "bluer = smoother (higher jerk-optimality)", ha="center", fontsize=8, color=INK2)
-    save(fig, "fig4a_rgb_trajectories")
+def _stretch(v, lo=2, hi=98):
+    a, b = np.percentile(v, [lo, hi])
+    return np.clip((v - a) / (b - a + 1e-12), 0, 1)
+
+
+def _spread(P, k):
+    """Farthest-point sampling: k well-separated indices of the path P (n x 3)."""
+    idx = [int(np.argmax(P[:, 2]))]
+    d = np.linalg.norm(P - P[idx[0]], axis=1)
+    for _ in range(k - 1):
+        idx.append(int(np.argmax(d)))
+        d = np.minimum(d, np.linalg.norm(P - P[idx[-1]], axis=1))
+    return sorted(idx)
+
+
+def fig_rgb_trajectories(subjects=(0, 8), task="Task1", n_labels=5):
+    """visualsThesis.ipynb cell 2 (thesis Fig. 4.6) with the real CFS."""
+    panels = [(s, c) for s in subjects for c in ("VR", "NVR")]
+    fig = make_subplots(rows=len(subjects), cols=2, specs=[[{"type": "scene"}] * 2] * len(subjects),
+                        subplot_titles=[f"Subject {s} · {task} · {'VR + haptics' if c == 'VR' else '2D / no haptics'}"
+                                        for s, c in panels], horizontal_spacing=0.0, vertical_spacing=0.04)
+    for k, (s, c) in enumerate(panels):
+        d = load_lgaf(s, c, task)
+        x, y, z = (d[a].to_numpy(float) * 1000 for a in ("x", "y", "z"))
+        F = d.F.to_numpy(float)
+        Fn, On = _stretch(F), _stretch(optimality(d))
+        rgb = [f"rgb({int(255 * (1 - f))},{int(255 * f)},{int(255 * o)})" for f, o in zip(Fn, On)]
+        R = np.clip(F / F.mean(), 0, 2) / 2 + 0.1 * optimality(d)   # reward the demonstration itself receives
+        fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode="markers+lines", marker=dict(size=3, color=rgb, opacity=0.85),
+                                   line=dict(color="black", width=1), showlegend=False), row=k // 2 + 1, col=k % 2 + 1)
+        fig.layout[f"scene{k + 1 if k else ''}"].update(
+            xaxis_title="X (mm)", yaxis_title="Y (mm)", zaxis_title="Z (mm)", camera=dict(eye=dict(x=1.5, y=1.5, z=0.9)),
+            annotations=[dict(x=x[i], y=y[i], z=z[i], text=f"Reward: {R[i]:.2f}", showarrow=True, arrowhead=1,
+                              ax=30, ay=-30, font=dict(size=10)) for i in _spread(np.c_[x, y, z], n_labels)])
+    style(fig, "Weighted Real-Time Trajectory Visualization · colour = (1−F, F, O): green = high CFS, "
+               "red = low CFS, bluer = smoother", width=1400, height=560 * len(subjects))
+    fig.update_layout(margin=dict(l=0, r=0, t=80, b=0))
+    save(fig, "fig4a_rgb_trajectories", scale=2)
 
 
 def fig_paired():
     subj = pd.read_csv(os.path.join(RESULTS, "human_subject_means.csv"))
     tests = pd.read_csv(os.path.join(RESULTS, "human_paired_tests.csv")).set_index("metric")
-    panels = [("cfs", "CFS (β/α × L_oddball/L_rest)"), ("cfs_cv", "CFS variability (CV)"),
-              ("optimality", "Jerk optimality O"), ("ldlj", "Smoothness (LDLJ)"),
-              ("micro_deviation", "Micro-deviation (mm)"), ("path_length", "Path length (m)")]
-    fig, axs = plt.subplots(2, 3, figsize=(7.2, 4.6))
-    axs = axs.ravel()
-    for ax, (m, lab) in zip(axs, panels):
-        w = subj.pivot(index="subject", columns="cond", values=m)
-        if m == "micro_deviation":
-            w = w * 1000
-        for s, r in w.iterrows():
-            ax.plot([0, 1], [r.NVR, r.VR], color=GRAY, lw=0.8, alpha=0.7, zorder=1)
-        ax.scatter(np.zeros(len(w)), w.NVR, s=18, color=ORANGE, zorder=2, edgecolor="white", lw=0.8, label="2D / no haptics")
-        ax.scatter(np.ones(len(w)), w.VR, s=18, color=BLUE, zorder=2, edgecolor="white", lw=0.8, label="VR + haptics")
-        for x, col in ((0, "NVR"), (1, "VR")):
-            ax.plot([x - 0.18, x + 0.18], [w[col].mean()] * 2, color=INK, lw=2)
-        t = tests.loc[m]
-        ax.set_title(f"{lab}\n$d_z$={t.dz:.2f}, p={t.p_t:.2f}", fontsize=8, color=INK)
-        ax.set_xticks([0, 1]); ax.set_xticklabels(["2D", "VR"]); ax.set_xlim(-0.5, 1.5)
-        ax.grid(axis="y", color="#eeeeee", lw=0.6)
-    h, l = axs[0].get_legend_handles_labels()
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.legend(h, l, frameon=False, fontsize=8, loc="upper center", ncol=2)
+    panels = [("cfs", "Cognitive Flow Score"), ("cfs_cv", "CFS variability (CV)"), ("optimality", "Jerk optimality"),
+              ("ldlj", "Smoothness (LDLJ)"), ("micro_deviation", "Micro-deviation (mm)"), ("path_efficiency", "Path efficiency")]
+    titles = [f"{lab}<br><sup>d<sub>z</sub> = {tests.loc[m].dz:.2f}, p = {tests.loc[m].p_t:.2f}</sup>" for m, lab in panels]
+    fig = make_subplots(rows=2, cols=3, subplot_titles=titles, vertical_spacing=0.16, horizontal_spacing=0.08)
+    for k, (m, _) in enumerate(panels):
+        r, c = k // 3 + 1, k % 3 + 1
+        w = subj.pivot(index="subject", columns="cond", values=m) * (1000 if m == "micro_deviation" else 1)
+        for _, row in w.iterrows():
+            fig.add_trace(go.Scatter(x=["2D", "VR"], y=[row.NVR, row.VR], mode="lines", line=dict(color=GRAY, width=1),
+                                     showlegend=False, hoverinfo="skip"), row=r, col=c)
+        fig.add_trace(go.Scatter(x=["2D"] * len(w), y=w.NVR, mode="markers", marker=dict(color=NVR, size=9),
+                                 name="2D / no haptics", showlegend=k == 0), row=r, col=c)
+        fig.add_trace(go.Scatter(x=["VR"] * len(w), y=w.VR, mode="markers", marker=dict(color=VR, size=9),
+                                 name="VR + haptics", showlegend=k == 0), row=r, col=c)
+        fig.add_trace(go.Scatter(x=["2D", "VR"], y=[w.NVR.mean(), w.VR.mean()], mode="lines+markers",
+                                 line=dict(color="black", width=4), marker=dict(size=12, color="black"),
+                                 name="mean", showlegend=k == 0), row=r, col=c)
+    style(fig, "Participant-level Metrics: VR + Haptics vs 2D", width=1300, height=850)
+    fig.update_layout(legend=dict(orientation="h", x=0.5, xanchor="center", y=-0.08))
     save(fig, "fig_human_paired")
 
 
 def fig_cfs_quality():
     win = pd.read_csv(os.path.join(RESULTS, "human_windows.csv"))
     mm = json.load(open(os.path.join(RESULTS, "human_models.json")))
-    fig, axs = plt.subplots(1, 2, figsize=(7.2, 3.0), gridspec_kw=dict(width_ratios=[1.6, 1]))
-    ax = axs[0]
-    for c, col in (("NVR", ORANGE), ("VR", BLUE)):
-        w = win[win.cond == c]
-        ax.scatter(w.cfs, w.opt, s=7, color=col, alpha=0.45, edgecolor="none",
-                   label="VR + haptics" if c == "VR" else "2D / no haptics")
-    for s, w in win.groupby("subject"):  # within-subject fits
-        if w.cfs.std() > 0:
-            b = np.polyfit(w.cfs, w.opt, 1)
-            xs = np.linspace(*w.cfs.quantile([0.05, 0.95]), 10)
-            ax.plot(xs, np.polyval(b, xs), color=INK, lw=0.7, alpha=0.5)
+    o, rs, sp = mm["mixed"]["opt"], mm["mixed"]["opt_robustness"]["random_slope"], mm["median_split"]["opt"]
+    fig = make_subplots(rows=1, cols=2, column_widths=[0.62, 0.38], horizontal_spacing=0.1, subplot_titles=[
+        f"CFS vs Jerk Optimality (5 s windows)<br><sup>β = {o['beta']:.2f}, p = {o['p']:.3f}; "
+        f"random slopes: β = {rs['beta']:.2f}, p = {rs['p']:.2f}</sup>",
+        f"Within-subject Median Split<br><sup>d<sub>z</sub> = {sp['dz']:.2f}, p = {sp['p']:.2f}</sup>"])
     lo, hi = win.cfs.quantile([0.01, 0.99])
-    ax.set_xlim(lo - 0.1, hi + 0.1)
-    o = mm["mixed"]["opt"]; rs = mm["mixed"]["opt_robustness"]["random_slope"]
-    ax.set_xlabel("Windowed CFS (5 s)"); ax.set_ylabel("Jerk optimality O (window mean)")
-    ax.set_title(f"Random intercept: β = {o['beta']:.2f}, p = {o['p']:.3f}\n+ random slope: β = {rs['beta']:.2f}, p = {rs['p']:.2f}", fontsize=8.5, color=INK)
-    ax.legend(frameon=False, fontsize=7, markerscale=2)
-    ax.grid(color="#eeeeee", lw=0.6)
-    # B: median split
-    ax = axs[1]
-    hb = win.assign(hi=win.groupby(["subject", "cond"]).cfs.transform(lambda v: v > v.median()))
-    t = hb.groupby(["subject", "hi"]).opt.mean().unstack()
-    for s, r in t.iterrows():
-        ax.plot([0, 1], [r[False], r[True]], color=GRAY, lw=0.8)
-    ax.scatter(np.zeros(len(t)), t[False], s=18, color="#c9c9c9", edgecolor=INK2, lw=0.6, zorder=3)
-    ax.scatter(np.ones(len(t)), t[True], s=18, color="#00b894", edgecolor="white", lw=0.6, zorder=3)
-    sp = mm["median_split"]["opt"]
-    ax.set_xticks([0, 1]); ax.set_xticklabels(["≤ median CFS", "> median CFS"]); ax.set_xlim(-0.5, 1.5)
-    ax.set_title(f"Within-subject split\n$d_z$ = {sp['dz']:.2f}, p = {sp['p']:.2f}", fontsize=8.5, color=INK)
-    ax.set_ylabel("Jerk optimality O"); ax.grid(axis="y", color="#eeeeee", lw=0.6)
-    fig.tight_layout()
+    w1 = win[(win.cfs >= lo) & (win.cfs <= hi)]
+    for c, col, lab in (("NVR", NVR, "2D / no haptics"), ("VR", VR, "VR + haptics")):
+        w = w1[w1.cond == c]
+        fig.add_trace(go.Scatter(x=w.cfs, y=w.opt, mode="markers", marker=dict(color=col, size=6, opacity=0.5), name=lab),
+                      row=1, col=1)
+    for k, (_, w) in enumerate(w1.groupby("subject")):
+        b = np.polyfit(w.cfs, w.opt, 1); xs = np.linspace(*w.cfs.quantile([0.05, 0.95]), 10)
+        fig.add_trace(go.Scatter(x=xs, y=np.polyval(b, xs), mode="lines", line=dict(color="black", width=1),
+                                 opacity=0.6, name="within-subject fit", showlegend=k == 0), row=1, col=1)
+    win["hi"] = win.groupby(["subject", "cond"]).cfs.transform(lambda v: v > v.median())
+    t = win.groupby(["subject", "hi"]).opt.mean().unstack()
+    for k, (_, r) in enumerate(t.iterrows()):
+        fig.add_trace(go.Scatter(x=["≤ median CFS", "> median CFS"], y=[r[False], r[True]], mode="lines+markers",
+                                 line=dict(color=GREEN), marker=dict(size=9), showlegend=False), row=1, col=2)
+    fig.update_xaxes(title_text="Windowed CFS", row=1, col=1)
+    fig.update_yaxes(title_text="Jerk optimality", row=1, col=1); fig.update_yaxes(title_text="Jerk optimality", row=1, col=2)
+    style(fig, width=1400, height=600).update_layout(legend=dict(x=0.01, y=0.02, bgcolor="rgba(255,255,255,0.8)"))
     save(fig, "fig4b_cfs_quality")
 
 
 def fig_confusion():
-    """Thesis Fig. 6.1 restyled (numbers from the thesis LGAF-CNN run)."""
+    """visualsThesis.ipynb cell 9 (thesis Fig. 6.1): Blues, raw counts."""
     cm = np.array([[9292, 3917, 5141], [802, 27153, 6079], [1916, 8009, 25544]])
     cls = ["rest", "oddball", "msit"]
-    fig, ax = plt.subplots(figsize=(3.6, 3.0))
-    rown = cm / cm.sum(1, keepdims=True)
-    im = ax.imshow(rown, cmap="Blues", vmin=0, vmax=1)
-    cb = fig.colorbar(im, ax=ax); cb.set_label("Row-normalised recall")
-    ax.set(xticks=range(3), yticks=range(3), xticklabels=cls, yticklabels=cls,
-           xlabel="Predicted label", ylabel="True label")
-    for i in range(3):
-        for j in range(3):
-            ax.text(j, i, f"{cm[i, j]:,}\n({rown[i, j]:.0%})", ha="center", va="center", fontsize=7,
-                    color="white" if rown[i, j] > 0.5 else INK)
-    ax.spines[:].set_visible(False)
+    fig = go.Figure(go.Heatmap(z=cm, x=cls, y=cls, colorscale="Blues", colorbar=dict(title="Count"),
+                               text=[[f"{v:,}" for v in r] for r in cm], texttemplate="%{text}",
+                               textfont=dict(size=16)))
+    fig.update_yaxes(autorange="reversed", title="True Label"); fig.update_xaxes(title="Predicted Label", tickangle=-45)
+    style(fig, "Confusion Matrix", width=650, height=560)
     save(fig, "fig_lgaf_confusion")
 
 
 if __name__ == "__main__":
+    fig_setup()
+    fig_ridl()
     fig_rgb_trajectories()
     fig_paired()
     fig_cfs_quality()
