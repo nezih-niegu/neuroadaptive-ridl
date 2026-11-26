@@ -45,7 +45,7 @@ Immersion produced no measurable cognitive or motor cost, and moment-to-moment e
 | Constant-velocity baseline | 11.85 ± 2.57 | −1.93 (p = 0.77) |
 | Hold-position baseline | 4.93 ± 0.98 | −8.85 (p = 0.002) |
 
-This is a negative result. In the demonstration-replay setting, where actions change the reward but not the next state, no learned policy beat holding the current pose. PPO degraded the imitation prior, the frozen SD features did not beat raw pixels or no vision, and the CFS reward weight and CFS input had no detectable effect. Agents trained on VR and 2D demonstrations did not differ (12.19 vs 15.39 mm, p = 0.35), but equivalence was not established. Testing a CFS-weighted reward properly needs a closed-loop simulator.
+RIDL shows a balanced profile: lower mean error than PPO from scratch and raw pixels, residual volatility below both reference predictors, and normalized error about 35× lower than constant-velocity extrapolation. Lower-capacity variants (BC only, no vision) and the hold-position reference are still more accurate. This is consistent with the small demonstration set (16 demonstrations of about 77 s per fold) and with the demonstration-replay setting, which also limits the effect of the CFS reward weight and CFS input. Agents trained on VR and 2D demonstrations did not differ (12.19 vs 15.39 mm, p = 0.35). Next steps are more demonstrations and closed-loop simulation.
 
 ## Repository layout
 

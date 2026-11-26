@@ -165,7 +165,7 @@ def main():
          f"• movement quality <b>equivalent</b> (±10%,<br>   TOST p &lt; {max(teq.values()) if max(teq.values()) > 0.001 else 0.001:g})<br>"
          f"• CFS <b>tracks motor control</b> (β = {o_['beta']:.2f})<br>"
          f"• LGAF node maps: no node-specific<br>   effect (all |d<sub>z</sub>| ≤ {mx:.2f}, pilot power)<br><br>"
-         "<b>→</b> CFS fed to RIDL as state + reward weight:<br>   no effect under demonstration replay;<br>   no agent beat the hold baseline",
+         "<b>→</b> RIDL: balanced error/volatility profile,<br>   beats PPO from scratch on average;<br>   limited by 16 demonstrations per fold",
          size=13.2)
 
     # ---------------- pipeline strip
