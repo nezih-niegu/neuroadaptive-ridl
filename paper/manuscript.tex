@@ -112,7 +112,7 @@ V_\beta\equiv\text{UWIST energetic arousal},\qquad V_\alpha\equiv\text{ARSQ tota
 \end{equation}
 where both scores are normalized before the ratio is taken. $V_\beta$ plays the role of $P_\beta$ (alertness) and $V_\alpha$ the role of $P_\alpha$ (resting state).
 
-\paragraph*{Step 3: learnable Gramian angular field (LGAF).} An EEG window is summarized by the feature matrix
+\paragraph*{Step 3: learnable Gramian angular field (LGAF).} The LGAF representation follows \cite{HernandezGomez2025GAF}, where it was introduced for EEG-based brain--computer interfaces. An EEG window is summarized by the feature matrix
 \begin{equation}\label{eq:xeeg}
 X_{\mathrm{EEG}}=\begin{pmatrix}V_{\alpha,0}&V_{\alpha,1}&\cdots&V_{\alpha,n}\\ V_{\beta,0}&V_{\beta,1}&\cdots&V_{\beta,n}\end{pmatrix},
 \end{equation}
@@ -439,7 +439,7 @@ This study shows that a VR--haptic surgical-teleoperation interface preserves EE
 All participants provided written informed consent before taking part. The study involved only non-invasive EEG and interaction with a haptic VR simulator, and was conducted in accordance with the Declaration of Helsinki.
 
 \section*{Author Contributions}
-N.N.G.: conceptualization, system design and integration (VR, haptics, EEG, dVRK simulation), methodology, data collection, model development (CFS, RIDL), formal analysis and writing (original draft). A.H.G., G.D.L.R.A., F.J.F.A., A.J.M.L. and L.A.M.U.: \TODO{contributions per co-author (CRediT roles), e.g.\ supervision, resources, data collection, writing -- review \& editing}. All authors approved the submitted version.
+N.N.G.: conceptualization, system design and integration (VR, haptics, EEG, dVRK simulation), methodology, data collection, model development (CFS, RIDL), formal analysis and writing (original draft). A.H.G.: methodology and software for the LGAF pipeline, including its formulation and the training of the LGAF-CNN, building on the homologous work in \cite{HernandezGomez2025GAF}. G.D.L.R.A.: software and resources for the VR integration. F.J.F.A.: methodology, design of the agent that learns from the demonstrations within RIDL. A.J.M.L.: investigation, participant testing and data collection. L.A.M.U.: project administration, supervision and funding acquisition. All authors contributed to writing (review and editing) and approved the submitted version.
 
 \section*{Funding}
 This work was supported by Tecnol\'ogico de Monterrey (graduate research funding) and CONAHCyT (graduate scholarship). Additional resources were provided by the Robotics and Intelligent Interaction Systems Group, Tecnol\'ogico de Monterrey.
