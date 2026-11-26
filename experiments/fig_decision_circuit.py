@@ -111,7 +111,7 @@ def main():
                       fillcolor="rgba(25,167,206,0.10)", line=dict(color="#19A7CE", width=1.2))
         fig.add_annotation(x=78, y=y, text=ridl, showarrow=False, xref="x3", yref="y3", font=dict(size=13, color=INK))
     fig.add_annotation(x=50, y=-3, xref="x3", yref="y3", showarrow=False, font=dict(size=10.5, color="#5f6368"),
-                       text="brain (thesis §3.6)  →  RIDL component (analogy, not a claim of mechanism)")
+                       text="brain circuit element  →  RIDL component (analogy, not a claim of mechanism)")
     fig.update_xaxes(range=[0, 100], visible=False, row=1, col=3)
     fig.update_yaxes(range=[-6, 100], visible=False, row=1, col=3)
     fig.update_layout(width=2100, height=760, paper_bgcolor="white", plot_bgcolor="white", showlegend=False,

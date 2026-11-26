@@ -148,7 +148,7 @@ SUBJ_HEAD = r"""\begin{tabular}{lcccccccc}
 \toprule
 & \multicolumn{2}{c}{\textbf{CFS}} & \multicolumn{2}{c}{\textbf{Path efficiency}} & \multicolumn{2}{c}{\textbf{Optimality $O$}} & \multicolumn{2}{c}{\textbf{LDLJ}} \\
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
-\textbf{Subject} & VR & 2D & VR & 2D & VR & 2D & VR & 2D \\
+\textbf{Participant} & VR & 2D & VR & 2D & VR & 2D & VR & 2D \\
 \midrule
 """
 ABL_HEAD = r"""\begin{tabular}{lccccc}
@@ -161,7 +161,7 @@ subj = pd.read_csv(os.path.join(RESULTS, "human_subject_means.csv"))
 w = subj.pivot(index="subject", columns="cond", values=["cfs", "path_efficiency", "optimality", "ldlj"])
 lines = []
 for s_, r in w.iterrows():
-    lines.append(f"sub{s_} & {r[('cfs','VR')]:.2f} & {r[('cfs','NVR')]:.2f} & {r[('path_efficiency','VR')]:.2f} & "
+    lines.append(f"P{int(s_) + 1} & {r[('cfs','VR')]:.2f} & {r[('cfs','NVR')]:.2f} & {r[('path_efficiency','VR')]:.2f} & "
                  f"{r[('path_efficiency','NVR')]:.2f} & {r[('optimality','VR')]:.3f} & {r[('optimality','NVR')]:.3f} & "
                  f"{r[('ldlj','VR')]:.2f} & {r[('ldlj','NVR')]:.2f} \\\\")
 m_, sd_ = w.mean(), w.std()

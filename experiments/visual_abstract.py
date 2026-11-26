@@ -128,7 +128,7 @@ def main():
     section(fig, 0.925, "1  Neuroscience rationale")
     ny0, ny1 = 0.585, 0.905
     text(fig, 0.0, ny1, "<b>a  The decision-making network, as sampled</b>", size=14.5)
-    text(fig, 0.0, ny1 - 0.022, "perception → evidence → decision → action (thesis model)", size=12, color=INK2)
+    text(fig, 0.0, ny1 - 0.022, "perception → evidence → decision → action (circuit model)", size=12, color=INK2)
     scalp(fig, [0.0, 0.30], [ny0, ny1 - 0.045])
 
     x0 = 0.335
@@ -250,7 +250,7 @@ def main():
              "(results pending)", size=13, color=INK2, xa="center")
     text(fig, 0.0, -0.012, "VR always preceded 2D (order not counterbalanced); N = 10 pilot. Statistics: paired t / "
                            "Wilcoxon, TOST (±10%), JZS Bayes factors, linear mixed models. Brain–electrode mapping "
-                           "follows the thesis decision-circuit model (Sec. 3.6).", size=11.5, color=INK2)
+                           "follows the decision-circuit model described in the paper.", size=11.5, color=INK2)
 
     out = os.path.join(ROOT, "docs"); os.makedirs(out, exist_ok=True)
     fig.write_image(os.path.join(out, "visual_abstract.png"), scale=2)

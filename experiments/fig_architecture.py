@@ -142,8 +142,8 @@ def main():
          "R<sub>t</sub> = A · <b>w(CFS<sub>t</sub>)</b> · exp(−‖â<sub>t</sub> − a*<sub>t</sub>‖² / 2σ²d) + B · smoothness<br>"
          "clip ε = 0.2 · GAE γ = 0.99, λ = 0.95", bsize=13)
     rbox(fig, 135, 33, 198, 45, LRN, "Subject curriculum",
-         "participant 0 → 1 → … → 7, weights carried forward<br>(levels 1 + 2 repeated per participant)", fill=0.07, bsize=13)
-    rbox(fig, 135, 10, 198, 28, DER, "Held-out evaluation (participants 8–9)",
+         "participant 1 → 2 → … → 8, weights carried forward<br>(levels 1 + 2 repeated per participant)", fill=0.07, bsize=13)
+    rbox(fig, 135, 10, 198, 28, DER, "Held-out evaluation (participants 9 and 10)",
          "residual r<sub>t</sub> = ‖x̂<sub>t+10</sub> − x<sub>t+10</sub>‖ → Kalman r̃<sub>t</sub><br>"
          "E<sub>traj</sub>, σ<sub>r</sub>; VR ↔ 2D cross-domain", fill=0.15, bsize=13)
     line(fig, [(96, 10), (96, 5.5), (132.5, 5.5), (132.5, 85.5)], POL, dash="solid")

@@ -22,6 +22,15 @@ from pstyle import GRAY, NVR, VR, save, style
 TRUE_C, PPO_C, RIDL_C = "white", "red", "#3f7bff"
 
 
+
+def pretty(k):
+    """'subject8-RH-NVR_Task1' -> 'Participant 9 · 2D · Task 1' (1-based numbering, as in the paper)."""
+    import re
+    m = re.match(r"subject(\d+)-\w+-(VR|NVR)_Task(\d)", k)
+    if not m:
+        return k.replace("_", " · ")
+    return f"Participant {int(m.group(1)) + 1} · {'VR + haptics' if m.group(2) == 'VR' else '2D'} · Task {m.group(3)}"
+
 def tfile(variant, src, fold):
     return os.path.join(RESULTS, "trajectories", f"{variant.replace('/', '_').replace(' ', '_')}__{src}__f{fold}.npz")
 
@@ -61,7 +70,7 @@ def fig_vis2(src="VR", fold=4, ridl_v="RIDL (full)", ppo_v="PPO from scratch", t
     fig = make_subplots(rows=len(keys), cols=2, column_widths=[0.55, 0.45], horizontal_spacing=0.06,
                         vertical_spacing=0.08, specs=[[{"type": "scene"}, {"type": "xy"}]] * len(keys),
                         subplot_titles=[t for k in keys for t in (
-                            k.replace("_", " · ") + " (held-out)",
+                            pretty(k) + " (held-out)",
                             f"Error · PPO {ppo[k + '__err'].mean():.1f} mm · RIDL {ridl[k + '__err'].mean():.1f} mm")])
     for i, k in enumerate(keys):
         _vis2_traces(fig, i + 1, k, ridl, ppo, legend=i == 0)
@@ -197,8 +206,8 @@ def fig_kalman(src="VR", fold=4, ridl_v="RIDL (full)", ppo_v="PPO from scratch",
     keys = [k for k in keys if k.startswith(subj + "-")][:2]
     fig = make_subplots(rows=2, cols=2, column_widths=[0.64, 0.36], horizontal_spacing=0.08, vertical_spacing=0.12,
                         specs=[[{}, {"rowspan": 2}], [{}, None]],
-                        subplot_titles=[keys[0].replace("_", " · ") + " (held-out)", "Error vs volatility (all runs)",
-                                        keys[1].replace("_", " · ") + " (held-out)" if len(keys) > 1 else ""])
+                        subplot_titles=[pretty(keys[0]) + " (held-out)", "Error vs volatility (all runs)",
+                                        pretty(keys[1]) + " (held-out)" if len(keys) > 1 else ""])
     for r, k in enumerate(keys, start=1):
         for arr, col, name, fill in ((ppo, "#EF553B", "PPO from scratch", "rgba(239,85,59,0.15)"),
                                      (ridl, VR, "RIDL", "rgba(99,110,250,0.18)")):

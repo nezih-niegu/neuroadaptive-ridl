@@ -59,7 +59,7 @@ def fig_rgb_trajectories(subjects=(0, 8), task="Task1", n_labels=5):
     """visualsThesis.ipynb cell 2 (thesis Fig. 4.6) with the real CFS."""
     panels = [(s, c) for s in subjects for c in ("VR", "NVR")]
     fig = make_subplots(rows=len(subjects), cols=2, specs=[[{"type": "scene"}] * 2] * len(subjects),
-                        subplot_titles=[f"Subject {s} · {task} · {'VR + haptics' if c == 'VR' else '2D / no haptics'}"
+                        subplot_titles=[f"Participant {s + 1} · {task.replace('Task', 'Task ')} · {'VR + haptics' if c == 'VR' else '2D / no haptics'}"
                                         for s, c in panels], horizontal_spacing=0.0, vertical_spacing=0.04)
     for k, (s, c) in enumerate(panels):
         d = load_lgaf(s, c, task)
