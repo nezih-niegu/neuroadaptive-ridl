@@ -210,16 +210,26 @@ def main():
                   row=1, col=2)
     fig.update_yaxes(title_text="Mean CFS per participant", row=1, col=2)
 
-    # ---------------- C: CFS -> optimality
-    lo, hi = win.cfs.quantile([0.02, 0.98]); ww = win[(win.cfs >= lo) & (win.cfs <= hi)]
-    fig.add_trace(go.Scatter(x=ww.cfs, y=ww.opt, mode="markers", marker=dict(color="#AB63FA", size=4, opacity=0.3)),
+    # ---------------- C: CFS -> optimality, one slope per participant (forest plot)
+    from scipy import stats as st_
+    gk = ["subject", "cond", "seg"]; wc = win.copy()
+    for v in ("cfs", "opt"):
+        wc[v + "_c"] = (wc[v] - wc.groupby(gk)[v].transform("mean")) / wc[v].std()
+    sl = []
+    for sid, g in wc.groupby("subject"):
+        r = st_.linregress(g.cfs_c, g.opt_c); h = r.stderr * st_.t.ppf(0.975, len(g) - 2)
+        sl.append((f"P{int(sid) + 1}", r.slope, r.slope - h, r.slope + h))
+    sl = pd.DataFrame(sl, columns=["p", "b", "lo", "hi"]).sort_values("b")
+    fig.add_trace(go.Scatter(x=sl.b, y=sl.p, mode="markers",
+                             marker=dict(size=9, color=[GREEN if l > 0 else GRAY for l in sl.lo]),
+                             error_x=dict(type="data", symmetric=False, array=sl.hi - sl.b, arrayminus=sl.b - sl.lo,
+                                          thickness=1.4, width=0, color="#8c8c8c")), row=1, col=3)
+    fig.add_trace(go.Scatter(x=[rs_["beta"]], y=["pooled"], mode="markers", marker=dict(symbol="diamond", size=15, color=INK),
+                             error_x=dict(type="data", array=[1.96 * rs_["se"]], thickness=2, width=0, color=INK)),
                   row=1, col=3)
-    for _, g in ww.groupby("subject"):
-        b = np.polyfit(g.cfs, g.opt, 1); x_ = np.linspace(*g.cfs.quantile([0.1, 0.9]), 5)
-        fig.add_trace(go.Scatter(x=x_, y=np.polyval(b, x_), mode="lines", line=dict(color=INK, width=1), opacity=0.6),
-                      row=1, col=3)
-    fig.update_xaxes(title_text="Windowed CFS (5 s)", row=1, col=3)
-    fig.update_yaxes(title_text="Jerk optimality", row=1, col=3)
+    fig.add_vline(x=0, line=dict(color="gray", dash="dot", width=1), row=1, col=3)
+    fig.update_yaxes(categoryorder="array", categoryarray=["pooled"] + list(sl.p), row=1, col=3)
+    fig.update_xaxes(title_text="CFS → optimality slope (SD/SD)", row=1, col=3)
 
     # ---------------- D: ablation (if available)
     if has_abl:

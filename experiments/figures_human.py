@@ -105,32 +105,58 @@ def fig_paired():
     save(fig, "fig_human_paired")
 
 
-def fig_cfs_quality():
+def fig_cfs_quality(n_bins=5):
+    """(A) Binned within-participant relationship: CFS and optimality are centred on each participant's block
+    (interface x task) means, windows are binned into CFS quintiles within each participant, and the per-bin
+    optimality deviation is averaged per participant, then mean +/- 95% CI across participants (VR and 2D pooled).
+    (B) Per-participant standardized slopes (95% CI) with the pooled random-slope estimate."""
+    from scipy import stats
     win = pd.read_csv(os.path.join(RESULTS, "human_windows.csv"))
     mm = json.load(open(os.path.join(RESULTS, "human_models.json")))
-    o, rs, sp = mm["mixed"]["opt"], mm["mixed"]["opt_robustness"]["random_slope"], mm["median_split"]["opt"]
-    fig = make_subplots(rows=1, cols=2, column_widths=[0.62, 0.38], horizontal_spacing=0.1, subplot_titles=[
-        f"CFS vs Jerk Optimality (5 s windows)<br><sup>β = {o['beta']:.2f}, p = {o['p']:.3f}; "
-        f"random slopes: β = {rs['beta']:.2f}, p = {rs['p']:.2f}</sup>",
-        f"Within-subject Median Split<br><sup>d<sub>z</sub> = {sp['dz']:.2f}, p = {sp['p']:.2f}</sup>"])
-    lo, hi = win.cfs.quantile([0.01, 0.99])
-    w1 = win[(win.cfs >= lo) & (win.cfs <= hi)]
-    for c, col, lab in (("NVR", NVR, "2D / no haptics"), ("VR", VR, "VR + haptics")):
-        w = w1[w1.cond == c]
-        fig.add_trace(go.Scatter(x=w.cfs, y=w.opt, mode="markers", marker=dict(color=col, size=6, opacity=0.5), name=lab),
-                      row=1, col=1)
-    for k, (_, w) in enumerate(w1.groupby("subject")):
-        b = np.polyfit(w.cfs, w.opt, 1); xs = np.linspace(*w.cfs.quantile([0.05, 0.95]), 10)
-        fig.add_trace(go.Scatter(x=xs, y=np.polyval(b, xs), mode="lines", line=dict(color="black", width=1),
-                                 opacity=0.6, name="within-subject fit", showlegend=k == 0), row=1, col=1)
-    win["hi"] = win.groupby(["subject", "cond"]).cfs.transform(lambda v: v > v.median())
-    t = win.groupby(["subject", "hi"]).opt.mean().unstack()
-    for k, (_, r) in enumerate(t.iterrows()):
-        fig.add_trace(go.Scatter(x=["≤ median CFS", "> median CFS"], y=[r[False], r[True]], mode="lines+markers",
-                                 line=dict(color=GREEN), marker=dict(size=9), showlegend=False), row=1, col=2)
-    fig.update_xaxes(title_text="Windowed CFS", row=1, col=1)
-    fig.update_yaxes(title_text="Jerk optimality", row=1, col=1); fig.update_yaxes(title_text="Jerk optimality", row=1, col=2)
-    style(fig, width=1400, height=600).update_layout(legend=dict(x=0.01, y=0.02, bgcolor="rgba(255,255,255,0.8)"))
+    o, rs = mm["mixed"]["opt"], mm["mixed"]["opt_robustness"]["random_slope"]
+    g = ["subject", "cond", "seg"]
+    win["cfs_w"] = win.cfs - win.groupby(g).cfs.transform("mean")      # CFS relative to the participant's own block mean
+    win["dopt"] = win.opt - win.groupby(g).opt.transform("mean")
+    win["bin"] = win.groupby("subject").cfs_w.transform(lambda v: pd.qcut(v.rank(method="first"), n_bins, labels=False))
+    fig = make_subplots(rows=1, cols=2, column_widths=[0.55, 0.45], horizontal_spacing=0.12, subplot_titles=[
+        f"Optimality across each participant's CFS range<br><sup>mixed model: β = {o['beta']:.2f} SD/SD, p = {o['p']:.3f}; "
+        f"no CFS × interface interaction</sup>",
+        f"Coupling per participant<br><sup>standardized slope ± 95% CI; pooled random-slope β = {rs['beta']:.2f}, p = {rs['p']:.2f}</sup>"])
+    xs = np.arange(1, n_bins + 1)
+    p = win.groupby(["subject", "bin"]).dopt.mean().unstack()
+    m, h = p.mean().values, (p.sem() * stats.t.ppf(0.975, len(p) - 1)).values
+    fig.add_trace(go.Scatter(x=np.r_[xs, xs[::-1]], y=np.r_[m + h, (m - h)[::-1]], fill="toself", fillcolor="rgba(0,204,150,0.18)", mode="lines",
+                             line=dict(width=0), hoverinfo="skip", showlegend=False), row=1, col=1)
+    fig.add_trace(go.Scatter(x=xs, y=m, mode="lines+markers", name="mean ± 95% CI across participants (VR and 2D pooled)",
+                             line=dict(color=GREEN, width=4), marker=dict(size=12, color=GREEN)), row=1, col=1)
+    fig.add_hline(y=0, line=dict(color="gray", dash="dot", width=1), row=1, col=1)
+    fig.update_xaxes(tickvals=xs, ticktext=["lowest", "2", "3", "4", "highest"][:n_bins] if n_bins == 5 else None,
+                     title_text="CFS quintile (within participant)", row=1, col=1)
+    fig.update_yaxes(title_text="Δ jerk optimality vs. participant mean", row=1, col=1)
+    # per-participant slopes on z-scored, within-participant-centred variables
+    d = win.copy()
+    for v in ("cfs", "opt"):
+        d[v + "_c"] = d[v] - d.groupby(g)[v].transform("mean")
+        d[v + "_c"] /= d[v].std()
+    rows = []
+    for sid, w in d.groupby("subject"):
+        r = stats.linregress(w.cfs_c, w.opt_c)
+        hw = r.stderr * stats.t.ppf(0.975, len(w) - 2)
+        rows.append((sid, r.slope, r.slope - hw, r.slope + hw))
+    S = pd.DataFrame(rows, columns=["subject", "b", "lo", "hi"]).sort_values("b")
+    labels = [f"P{int(s) + 1}" for s in S.subject]
+    cols = [GREEN if lo > 0 else ("#EF553B" if hi < 0 else GRAY) for lo, hi in zip(S.lo, S.hi)]
+    fig.add_trace(go.Scatter(x=S.b, y=labels, mode="markers", marker=dict(size=11, color=cols), showlegend=False,
+                             error_x=dict(type="data", symmetric=False, array=S.hi - S.b, arrayminus=S.b - S.lo,
+                                          thickness=1.6, width=0, color="#7f7f7f")), row=1, col=2)
+    hw = 1.96 * rs.get("se", 0)
+    fig.add_trace(go.Scatter(x=[rs["beta"]], y=["pooled"], mode="markers", marker=dict(symbol="diamond", size=18, color="black"),
+                             error_x=dict(type="data", array=[hw], thickness=2.2, width=0, color="black"),
+                             showlegend=False), row=1, col=2)
+    fig.add_vline(x=0, line=dict(color="gray", dash="dot", width=1), row=1, col=2)
+    fig.update_yaxes(categoryorder="array", categoryarray=["pooled"] + labels, row=1, col=2)
+    fig.update_xaxes(title_text="Standardized slope (SD optimality per SD CFS)", row=1, col=2)
+    style(fig, width=1400, height=600).update_layout(legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)"))
     save(fig, "fig4b_cfs_quality")
 
 

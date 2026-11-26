@@ -87,6 +87,20 @@ if os.path.exists(abl):
     put("srcDiff", f"{diff.mean():+.2f}"); put("srcP", p(stats.ttest_1samp(diff, 0).pvalue)); put("srcTost", p(pt))
     put("srcCIlo", f"{diff.mean() - stats.t.ppf(.95, len(diff) - 1) * se:+.2f}")
     put("srcCIhi", f"{diff.mean() + stats.t.ppf(.95, len(diff) - 1) * se:+.2f}")
+# per-participant CFS -> optimality slopes (within-block centred, standardized), as in fig4b
+_w = pd.read_csv(os.path.join(RESULTS, "human_windows.csv"))
+if len(_w):
+    from scipy import stats as _st
+    _g = ["subject", "cond", "seg"]
+    for _v in ("cfs", "opt"):
+        _w[_v + "_c"] = (_w[_v] - _w.groupby(_g)[_v].transform("mean")) / _w[_v].std()
+    _sl = []
+    for _, _x in _w.groupby("subject"):
+        _r = _st.linregress(_x.cfs_c, _x.opt_c); _h = _r.stderr * _st.t.ppf(0.975, len(_x) - 2)
+        _sl.append((_r.slope, _r.slope - _h, _r.slope + _h))
+    _sl = np.array(_sl)
+    put("slPos", str(int((_sl[:, 0] > 0).sum()))); put("slSigPos", str(int((_sl[:, 1] > 0).sum())))
+    put("slSigNeg", str(int((_sl[:, 2] < 0).sum())))
 cs = os.path.join(RESULTS, "curves_summary.json")
 if os.path.exists(cs):
     c = json.load(open(cs))
