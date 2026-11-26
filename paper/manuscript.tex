@@ -69,11 +69,15 @@ This study builds on a neuroadaptive training framework previously developed by 
 
 % =================================================================
 \section{Materials and Methods}
+This section describes the participants, the training environment and protocol, and the EEG recordings, followed by the circuit model that motivates the electrode montage. It then derives, step by step, the Cognitive Flow Score, the behavioral metrics and the statistical tests used to compare the two interfaces. It closes with the RIDL agent, its reward, its training procedure and the evaluation protocol of the ablation study. All equations use the same symbols as the code that produced the reported numbers.
+
 
 \subsection{Participants}
 Ten volunteers with novice-to-intermediate experience in robotic manipulation participated (age range 18--25 years; nine right-handed, one left-handed). Eligibility required normal or corrected vision and tolerance of VR and haptic devices; exclusion criteria were neurological disorders, severe simulator sickness and motor impairments. All participants gave written informed consent before taking part, and all data were anonymized before analysis.
 
 \subsection{Training Environment}
+The training environment combines a surgical-robot simulator, a stereoscopic headset, a force-feedback device and a fixed task protocol, so that both interfaces present the same tasks and differ only in how the scene is displayed and whether forces are felt.
+
 \paragraph*{Simulation platform.} A dVRK teleoperation simulator built on AMBF \cite{8968568,Munawar2021} rendered a stereoscopic surgical field, streamed to a Meta Quest~3 headset (GStreamer/OBS virtual camera, Unity/OpenXR). The dVRK is a standard research platform for surgical robotics \cite{d2021accelerating,surrol,9807505}; the environment reproduced 3D depth cues, tool articulation and endoscope motion typical of minimally invasive procedures \cite{9697399,9925319}. Tool pose (position, roll/pitch/yaw), interaction forces and left-endoscope frames were logged through ROS \cite{mower2022rospybullet}.
 
 \paragraph*{Haptic interface.} Force feedback was delivered through a 3-DoF Novint Falcon \cite{hapticshci2}, run in a Docker container and bridged to ROS by custom nodes; contact events produced proportional resistance \cite{Rangarajan2020,Alaker2016}.
@@ -81,7 +85,12 @@ Ten volunteers with novice-to-intermediate experience in robotic manipulation pa
 \paragraph*{Protocol.} Each participant completed, per interface, a Reference block ($\approx$30\,s), Task~1 and Task~2 ($\approx$77\,s each) and a resting-state block. Tasks comprised positioning, grasp-and-transfer and trajectory-following primitives \cite{Jackson2013,ManojVarier2020,Lobbezoo2021,Chiu2020}. All participants performed the VR+haptics session first and the 2D/no-haptics session second; condition order was therefore \emph{not} counterbalanced (see Limitations).
 
 \subsection{Experimental Conditions}
-\textbf{VR+haptics:} stereoscopic headset view and force feedback. \textbf{2D/no haptics (NVR):} the same scene on a monitor, without force feedback. Task objectives and timing were identical.
+Each participant performed the same tasks under two interface conditions, which are compared throughout the paper:
+\begin{itemize}
+\item \textbf{VR+haptics:} the stereoscopic scene was viewed through the headset, and contact forces were rendered by the force-feedback device.
+\item \textbf{2D/no haptics (NVR):} the same scene was viewed on a conventional monitor, without force feedback.
+\end{itemize}
+Task objectives, scoring and timing were identical in both conditions, so any difference between them can be attributed to the display and the presence of force feedback (subject to the fixed condition order described above).
 
 \subsection{EEG Acquisition}
 EEG was recorded with an 8-channel Enobio dry-electrode system (NIC~2.1) at 500\,Hz from O1, Oz, O2, CP1, CP2, C3, C4 and Fz, with a 50\,Hz line filter and on-board accelerometer \cite{Duvinage2013Performance,Qiu2019Assessing}. Consumer-grade dry systems are adequate for engagement indices when configured carefully \cite{Frey2016Comparison,Han2018Interactive}. Participants completed the UWIST Mood Adjective Checklist (energetic arousal, tense arousal, hedonic tone) and the Amsterdam Resting-State Questionnaire (ARSQ) \cite{10.3389/fnrgo.2022.1052411}.
@@ -211,6 +220,8 @@ over submovements longer than 1\,mm \cite{Jackson2013}. $\mathrm{PE}=1$ for perf
 \paragraph*{Other metrics.} Path length $\sum_t\|p_t-p_{t-1}\|$, mean speed, active-time fraction, submovement rate and RMS interaction force. Because each block had a fixed duration, completion time is not an outcome; grasp success was not logged and is not reported.
 
 \subsection{Statistical Analysis}
+The statistical analysis addresses two questions. The first is whether the two interfaces differ at the participant level, which is answered with paired tests, equivalence tests and Bayes factors so that the absence of a difference can be assessed rather than merely failing to find one. The second is whether engagement and movement quality are coupled over time, which is answered with a mixed-effects model on five-second windows that accounts for repeated measurements within each participant.
+
 \paragraph*{Paired tests.} For participant $i$ ($n=10$) and a metric $x$, let $d_i=x_i^{\mathrm{VR}}-x_i^{\mathrm{2D}}$ with mean $\bar d$ and standard deviation $s_d$. The paired $t$ statistic, the effect size and the 90\% confidence interval are
 \begin{equation}\label{eq:ttest}
 t=\frac{\bar d}{s_d/\sqrt n},\qquad d_z=\frac{\bar d}{s_d},\qquad \mathrm{CI}_{90}=\bar d\pm t_{0.95,\,n-1}\frac{s_d}{\sqrt n},
@@ -246,6 +257,8 @@ $\beta_1$ is the within-model change in quality, in SD, per SD of CFS. The robus
 
 % -----------------------------------------------------------------
 \subsection{RIDL: Hierarchical Reinforcement-and-Imitation Diffusion Learning}
+RIDL is the learning agent of the framework. It learns to predict the surgeon's next tool motion from the endoscope image and the recorded kinematic, force and engagement signals, first by imitating the demonstrations and then by refining that imitation with reinforcement learning on a reward weighted by CFS. The following paragraphs formulate the problem, build the policy network, define the two training levels and the reward, and describe how the agents were evaluated.
+
 
 \paragraph*{Problem formulation.} Robotic teleoperation is modeled as a Markov decision process $(\mathcal S,\mathcal A,P,R,\gamma)$, and the agent seeks a policy $\pi_\theta(a\mid s)$ that maximizes the expected discounted return,
 \begin{equation}\label{eq:mdp}
@@ -387,6 +400,8 @@ in standardized units, so position, orientation and force contribute equally.
 Ablations remove one component at a time: the imitation prior (PPO from scratch), PPO refinement (BC only), the visual prior (no vision; raw pixels instead of SD-UNet features), CFS weighting of the reward ($w_t\equiv1$), CFS as state input, and the subject curriculum (pooled training). The checkpoints of the original RIDL implementation (one per interface and task, trained sequentially on participants 1--8 with the action-independent reward) were additionally re-assessed on participants 9 and 10, with targets normalized by training-set statistics so that their errors are comparable with the ablation. Sample efficiency was measured by evaluating held-out NMSE after every PPO update, for RIDL and for PPO from scratch, with an extended budget of 15 rollouts per participant.
 
 \section{Results}
+The results are presented in the order of the study's questions. The first two subsections compare engagement and movement quality between the VR+haptics and 2D interfaces; the third examines whether engagement and movement quality are coupled from moment to moment; and the fourth inspects the LGAF maps of the decision-making network. The last three subsections report the RIDL ablation, the comparison of agents trained on VR and on 2D demonstrations, and the sample-efficiency analysis.
+
 
 \subsection{Immersion Leaves Cognitive Engagement Intact}
 The first question was whether the immersive interface imposed a cognitive cost on the learner. It did not. Participant-level CFS was comparable under VR+haptics ($M=\hCfsVR\pm\hCfsVRsd$) and under the 2D display ($M=\hCfsNVR\pm\hCfsNVRsd$), $t(9)=\hCfsT$, $p\hCfsP$, $d_z=\hCfsDz$ (Figure~\ref{fig:paired}; Table~\ref{tab:subjects}). The 90\% confidence interval of the difference, $[\hCfsCIlo,\ \hCfsCIhi]$, corresponds to $\hCfsCIloPct$\% to $+\hCfsCIhiPct$\% of the 2D mean and therefore excludes any large loss of engagement under immersion, while the Bayes factor mildly favored the absence of a difference (BF$_{01}=\hCfsBF$). Formal equivalence within $\pm$10\% could not be established at this sample size (TOST $p\hCfsTost$), so the result is best read as ``no detectable cost'' rather than as proven equivalence. Engagement was, if anything, steadier in the headset: the within-session coefficient of variation of CFS was \hCfsCvVR{} under VR+haptics and \hCfsCvNVR{} under 2D ($p\hCfsCvP$; Holm-corrected $p\hCfsCvPholm$), a difference driven by three participants whose 2D sessions were unusually unstable.
