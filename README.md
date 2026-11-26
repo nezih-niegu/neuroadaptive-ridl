@@ -107,7 +107,8 @@ See `thesis/README.md` for the issues found in the original evaluation script.
 ```bibtex
 @article{nietogutierrez_neuroadaptive_ridl,
   title   = {Neuroadaptive Decision-Making AI for Immersive Surgical Robotics Training},
-  author  = {Nieto Guti{\'e}rrez, Nezih},
+  author  = {Nieto Guti{\'e}rrez, Nezih and Hern{\'a}ndez G{\'o}mez, Alejandro and De Los R{\'i}os Alatorre, Gustavo and
+             F{\'e}lix Arredondo, Felipe de Jes{\'u}s and Murra L{\'o}pez, Arturo Jos{\'e} and Mu{\~n}oz Ubando, Luis Alberto},
   journal = {Frontiers in Systems Neuroscience},
   note    = {under review}
 }
