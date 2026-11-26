@@ -31,7 +31,7 @@ import torch
 import torch.nn as nn
 
 from common import ACT, CACHE, RESULTS, SUBJECTS, merged_segment, seg_name
-from ridl.model import PositionalEncoding
+from model import PositionalEncoding
 
 TASKS = ["Task1", "Task2"]
 HORIZON = int(os.environ.get("RIDL_H", "10"))  # action-chunk horizon in 0.1 s steps (10 = 1 s)
@@ -311,34 +311,46 @@ def run(variant, source, fold, seed, folds, cache, curve_every=False):
     return rows, trajs, curve, (model, nz)
 
 
-def curves(seeds, iters, threads):
-    """Sample efficiency: held-out NMSE after every PPO update, RIDL vs PPO-scratch."""
+CURVE_RUNS = {"ridl": ("RIDL (BC → PPO)", "RIDL (full)"), "ppo": ("PPO from scratch", "PPO from scratch")}
+
+
+def curves(seeds, iters, threads, only=None):
+    """Sample efficiency: held-out NMSE after every PPO update, RIDL vs PPO-scratch.
+    With only='ridl'|'ppo' a single arm is run and saved to curves_<only>.json."""
     torch.set_num_threads(threads)
     folds = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]]
-    cache, C = {}, {}
-    for name, v in (("RIDL (BC → PPO)", "RIDL (full)"), ("PPO from scratch", "PPO from scratch")):
+    cache = {}
+    for key in ([only] if only else list(CURVE_RUNS)):
+        name, v = CURVE_RUNS[key]
         vis, bce, _, fw, fi, sch = VARIANTS[v]
         VARIANTS["_curve"] = (vis, bce, iters, fw, fi, sch)
-        C[name] = []
+        runs = []
         for f in range(len(folds)):
             for sd in range(seeds):
                 _, _, cv, _ = run("_curve", "VR", f, sd, folds, cache, curve_every=True)
-                C[name].append(cv)
+                runs.append(cv)
                 print(name, f, sd, cv[-1], flush=True)
+        json.dump({name: runs}, open(os.path.join(RESULTS, f"curves_{key}.json"), "w"))
+    if not only:
+        merge_curves()
+
+
+def merge_curves():
+    C = {}
+    for key in CURVE_RUNS:
+        C.update(json.load(open(os.path.join(RESULTS, f"curves_{key}.json"))))
     json.dump(C, open(os.path.join(RESULTS, "curves.json"), "w"))
-    # steps for PPO-scratch to reach the error RIDL has after its first PPO update
-    out = {}
-    r0 = np.array([c[0]["test_nmse"] for c in C["RIDL (BC → PPO)"]])
-    rf = np.array([c[-1]["test_nmse"] for c in C["RIDL (BC → PPO)"]])
-    pf = np.array([c[-1]["test_nmse"] for c in C["PPO from scratch"]])
+    R, P = C["RIDL (BC → PPO)"], C["PPO from scratch"]
+    r0 = np.array([c[0]["test_nmse"] for c in R]); rf = np.array([c[-1]["test_nmse"] for c in R])
+    pf = np.array([c[-1]["test_nmse"] for c in P])
     reach = []
-    for c, thr in zip(C["PPO from scratch"], rf):
+    for c, thr in zip(P, rf):
         hit = [p["steps"] for p in c if p["test_nmse"] <= thr]
         reach.append(hit[0] if hit else np.nan)
+    reach = np.array(reach, float)
     out = dict(ridl_after_first_update=r0.mean(), ridl_final=rf.mean(), ppo_final=pf.mean(),
                ppo_steps_to_ridl_final=float(np.nanmean(reach)) if np.isfinite(reach).any() else None,
-               ppo_reached_frac=float(np.isfinite(reach).mean()),
-               total_steps=C["RIDL (BC → PPO)"][0][-1]["steps"])
+               ppo_reached_frac=float(np.isfinite(reach).mean()), total_steps=R[0][-1]["steps"])
     json.dump(out, open(os.path.join(RESULTS, "curves_summary.json"), "w"), indent=1, default=float)
     print(out)
 
@@ -346,14 +358,18 @@ def curves(seeds, iters, threads):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--curves", action="store_true")
+    ap.add_argument("--curve-only", choices=["ridl", "ppo"], default=None)
+    ap.add_argument("--merge-curves", action="store_true")
     ap.add_argument("--curve-iters", type=int, default=25)
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--variants", nargs="*", default=list(VARIANTS))
     ap.add_argument("--threads", type=int, default=6)
     ap.add_argument("--tag", default="ablation")
     a = ap.parse_args()
+    if a.merge_curves:
+        return merge_curves()
     if a.curves:
-        return curves(a.seeds, a.curve_iters, a.threads)
+        return curves(a.seeds, a.curve_iters, a.threads, a.curve_only)
     torch.set_num_threads(a.threads)
     folds = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]]
     out_csv = os.path.join(RESULTS, f"{a.tag}.csv")
