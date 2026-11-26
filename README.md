@@ -115,4 +115,4 @@ See `thesis/README.md` for the issues found in the original evaluation script.
 
 ## License
 
-To be decided by the author before release.
+Code: [MIT](LICENSE). The manuscript text and figures are not covered by this license. Raw participant data are not distributed.
