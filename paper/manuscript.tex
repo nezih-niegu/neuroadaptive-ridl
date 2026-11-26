@@ -85,12 +85,7 @@ The training environment combines a surgical-robot simulator, a stereoscopic hea
 \paragraph*{Protocol.} Each participant completed, per interface, a Reference block ($\approx$30\,s), Task~1 and Task~2 ($\approx$77\,s each) and a resting-state block. Tasks comprised positioning, grasp-and-transfer and trajectory-following primitives \cite{Jackson2013,ManojVarier2020,Lobbezoo2021,Chiu2020}. All participants performed the VR+haptics session first and the 2D/no-haptics session second; condition order was therefore \emph{not} counterbalanced (see Limitations).
 
 \subsection{Experimental Conditions}
-Each participant performed the same tasks under two interface conditions, which are compared throughout the paper:
-\begin{itemize}
-\item \textbf{VR+haptics:} the stereoscopic scene was viewed through the headset, and contact forces were rendered by the force-feedback device.
-\item \textbf{2D/no haptics (NVR):} the same scene was viewed on a conventional monitor, without force feedback.
-\end{itemize}
-Task objectives, scoring and timing were identical in both conditions, so any difference between them can be attributed to the display and the presence of force feedback (subject to the fixed condition order described above).
+Each participant performed the same tasks under two interface conditions, which are compared throughout the paper. In the VR+haptics condition, the stereoscopic scene was viewed through the headset and contact forces were rendered by the force-feedback device. In the 2D/no-haptics condition (NVR), the same scene was viewed on a conventional monitor, without force feedback. Task objectives, scoring and timing were identical in both conditions, so any difference between them can be attributed to the display and the presence of force feedback (subject to the fixed condition order described above).
 
 \subsection{EEG Acquisition}
 EEG was recorded with an 8-channel Enobio dry-electrode system (NIC~2.1) at 500\,Hz from O1, Oz, O2, CP1, CP2, C3, C4 and Fz, with a 50\,Hz line filter and on-board accelerometer \cite{Duvinage2013Performance,Qiu2019Assessing}. Consumer-grade dry systems are adequate for engagement indices when configured carefully \cite{Frey2016Comparison,Han2018Interactive}. Participants completed the UWIST Mood Adjective Checklist (energetic arousal, tense arousal, hedonic tone) and the Amsterdam Resting-State Questionnaire (ARSQ) \cite{10.3389/fnrgo.2022.1052411}.
@@ -125,14 +120,11 @@ where both scores are normalized before the ratio is taken. $V_\beta$ plays the 
 \begin{equation}\label{eq:xeeg}
 X_{\mathrm{EEG}}=\begin{pmatrix}V_{\alpha,0}&V_{\alpha,1}&\cdots&V_{\alpha,n}\\ V_{\beta,0}&V_{\beta,1}&\cdots&V_{\beta,n}\end{pmatrix},
 \end{equation}
-whose two rows are the $\alpha$ and $\beta$ series over the $n+1$ samples of the window. The LGAF turns it into an image in four operations.
-\begin{enumerate}
-\item \emph{Learnable embedding:}
+whose two rows are the $\alpha$ and $\beta$ series over the $n+1$ samples of the window. The LGAF turns it into an image in four operations. The first is a learnable embedding,
 \begin{equation}\label{eq:lgaf_embed}
 X_t=W_xX_{\mathrm{EEG}}+b_x ,
 \end{equation}
-where $W_x$ and $b_x$ are trained with the classifier.
-\item \emph{Rescaling to $[-1,1]$:}
+where $W_x$ and $b_x$ are trained with the classifier. The second rescales the embedded series to $[-1,1]$,
 \begin{equation}\label{eq:lgaf_scale}
 \hat X=2\,\frac{x-\min(x)}{\max(x)-\min(x)}-1,
 \end{equation}
@@ -140,17 +132,15 @@ where, so that gradients reach $W_x$, the extrema are replaced by their LogSumEx
 \begin{equation}\label{eq:lse}
 \max(x_1,\dots,x_n)\approx\frac1{\alpha_s}\log\sum_{i=1}^{n}e^{\alpha_s x_i},\qquad \min(x_1,\dots,x_n)\approx-\frac1{\alpha_s}\log\sum_{i=1}^{n}e^{-\alpha_s x_i}.
 \end{equation}
-Here $\alpha_s>0$ sets the sharpness; as $\alpha_s\to\infty$ both become exact.
-\item \emph{Angular encoding:} each rescaled value becomes an angle,
+Here $\alpha_s>0$ sets the sharpness; as $\alpha_s\to\infty$ both become exact. The third operation encodes each rescaled value as an angle,
 \begin{equation}\label{eq:arccos}
 \phi=\arccos(\hat X)\in[0,\pi].
 \end{equation}
-\item \emph{Gramian angular difference field:}
+The fourth forms the Gramian angular difference field,
 \begin{equation}\label{eq:gadf}
 \mathrm{GADF}_{ij}=\sin\!\big(W_1\phi^{(1)}_i-W_2\phi^{(2)}_j+b\big),
 \end{equation}
 where $\phi^{(1)}$ and $\phi^{(2)}$ are the angular series of the two rows, and $W_1$, $W_2$ and $b$ are learnable. Entry $(i,j)$ compares the first series at time $i$ with the second at time $j$. The diagonal therefore encodes the instantaneous $\alpha$--$\beta$ relation, and the off-diagonal entries encode temporal dependencies.
-\end{enumerate}
 
 \paragraph*{Step 4: class likelihoods.} A convolutional network $f_\theta$ processes the GADF image. It has four depthwise-separable convolutional blocks (dilation rates 2 and 4, dropout 0.3 and 0.5), global average pooling and a dense head, and it was trained with AdamW (learning rate $10^{-4}$) on the Nencki--Symfonia dataset \cite{ds004621:1.0.3} to recognise three cognitive states, $c\in\{\text{rest},\text{oddball},\text{MSIT}\}$ (Table~\ref{tab:lgaf_class}). For a participant's own EEG at time $t$, the network returns logits $z_c(t)$, which are converted into class likelihoods by the softmax
 \begin{equation}\label{eq:softmax}
@@ -163,29 +153,15 @@ F(t)=\underbrace{\frac{V_\beta}{V_\alpha}}_{\text{engagement, Eq.~\ref{eq:virtua
 \end{equation}
 sampled at 10\,Hz. $F(t)>E_v$ when the EEG looks more like the oddball (attentive) state than like rest. Because $E_v$ is nearly constant within a session ($E_v=0.702$ in both conditions), the temporal dynamics of $F(t)$ come from the EEG-decoded ratio.
 
-\paragraph*{LGAF maps of the decision-making network.} To show what the decoder sees, LGAF maps were computed for the nodes of the decision-making circuit (Figure~\ref{fig:circuit}) that the montage covers:
-\begin{itemize}
-\item core decision and goal maintenance (Fz);
-\item motor planning (C3, C4);
-\item parietal attention (CP1, CP2; the sites nearest P3/P4);
-\item visual input (O1, Oz, O2).
-\end{itemize}
-FCz, FC1/2, Fp1/2 and F3/F4 were not recorded. For each node:
-\begin{enumerate}
-\item The raw EEG of each channel was band-passed (fourth-order zero-phase Butterworth) into $\alpha$ (8--12\,Hz) and $\beta$ (13--30\,Hz), and the amplitude envelope was obtained from the analytic signal,
+\paragraph*{LGAF maps of the decision-making network.} To show what the decoder sees, LGAF maps were computed for the nodes of the decision-making circuit (Figure~\ref{fig:circuit}) that the montage covers: core decision and goal maintenance (Fz), motor planning (C3, C4), parietal attention (CP1, CP2, the sites nearest P3/P4) and visual input (O1, Oz, O2); FCz, FC1/2, Fp1/2 and F3/F4 were not recorded. For each node, the raw EEG of each channel was band-passed (fourth-order zero-phase Butterworth) into $\alpha$ (8--12\,Hz) and $\beta$ (13--30\,Hz), and the amplitude envelope was obtained from the analytic signal,
 \begin{equation}\label{eq:hilbert}
 a_b(t)=\big|x_b(t)+j\,\mathcal H\{x_b\}(t)\big|,\qquad b\in\{\alpha,\beta\},
 \end{equation}
-where $\mathcal H$ is the Hilbert transform. Envelopes were averaged over the node's channels and interpolated onto the 10\,Hz CFS timeline.
-\item The envelopes were cut into windows of $N=64$ steps (6.4\,s), giving $\approx$\lgafWin{} windows per participant and interface (\lgafWinTotal{} in total).
-\item Within each window, each envelope was $z$-scored, rescaled with Eqs.~\eqref{eq:lgaf_scale}--\eqref{eq:lse} ($\alpha_s=4$, clipped to $[-1,1]$) and converted to angles with Eq.~\eqref{eq:arccos}.
-\item The map is the cross-field of Eq.~\eqref{eq:gadf} between the two bands, $\mathrm{GADF}_{ij}=\sin(\phi^{\alpha}_i-\phi^{\beta}_j)$. The trained LGAF weights were not archived, so the identity initialization is used ($W_1=W_2=1$, $b=0$).
-\item The map is summarized by its mean diagonal,
+where $\mathcal H$ is the Hilbert transform. Envelopes were averaged over the node's channels and interpolated onto the 10\,Hz CFS timeline. The envelopes were then cut into windows of $N=64$ steps (6.4\,s), giving $\approx$\lgafWin{} windows per participant and interface (\lgafWinTotal{} in total). Within each window, each envelope was $z$-scored, rescaled with Eqs.~\eqref{eq:lgaf_scale}--\eqref{eq:lse} ($\alpha_s=4$, clipped to $[-1,1]$) and converted to angles with Eq.~\eqref{eq:arccos}. The map is the cross-field of Eq.~\eqref{eq:gadf} between the two bands, $\mathrm{GADF}_{ij}=\sin(\phi^{\alpha}_i-\phi^{\beta}_j)$. The trained LGAF weights were not archived, so the identity initialization is used ($W_1=W_2=1$, $b=0$). Finally, each map is summarized by its mean diagonal,
 \begin{equation}\label{eq:diag}
 D=\frac1N\sum_{t=1}^{N}\sin\!\big(\phi^{\alpha}_t-\phi^{\beta}_t\big),
 \end{equation}
 which is positive when $\beta$ is relatively stronger than $\alpha$. $D$ was averaged over the windows above and below each participant's median CFS, and the two means were compared across participants with a paired $t$-test (Figure~\ref{fig:lgaf}).
-\end{enumerate}
 
 \subsection{Behavioral Metrics}
 All metrics were computed from the 10\,Hz tool logs of Task~1 and Task~2 and averaged per participant and condition \cite{Varier2022,Chiu2021}. Here $p_t\in\mathbb R^3$ is the tool position and $\Delta t=0.1$\,s the sampling interval.
@@ -247,13 +223,7 @@ $\mathrm{BF}_{01}>3$ is read as moderate evidence for no difference.
 \begin{equation}\label{eq:lmm}
 y_{ij}=\beta_0+\beta_1\,c_{ij}+\beta_2\,\mathrm{VR}_{ij}+\beta_3\,\mathrm{Task2}_{ij}+u_{0i}+\varepsilon_{ij},\qquad u_{0i}\sim\mathcal N(0,\tau_0^2),\ \ \varepsilon_{ij}\sim\mathcal N(0,\sigma^2),
 \end{equation}
-where:
-\begin{itemize}
-\item $y_{ij}$ is the $z$-scored quality metric (optimality, LDLJ or micro-deviation) and $c_{ij}$ the $z$-scored mean CFS of the window;
-\item $\mathrm{VR}_{ij}$ and $\mathrm{Task2}_{ij}$ are indicator variables;
-\item $u_{0i}$ is the participant's random intercept.
-\end{itemize}
-$\beta_1$ is the within-model change in quality, in SD, per SD of CFS. The robustness model adds a random slope, $(\beta_1+u_{1i})\,c_{ij}$ with $(u_{0i},u_{1i})\sim\mathcal N(\mathbf 0,\Sigma)$, so that each participant may have their own CFS--quality slope. It was also refitted after 1--99\% trimming and after replacing CFS with its within-participant rank. Models were fitted by REML.
+where $y_{ij}$ is the $z$-scored quality metric (optimality, LDLJ or micro-deviation), $c_{ij}$ is the $z$-scored mean CFS of the window, $\mathrm{VR}_{ij}$ and $\mathrm{Task2}_{ij}$ are indicator variables, and $u_{0i}$ is the participant's random intercept. $\beta_1$ is the within-model change in quality, in SD, per SD of CFS. The robustness model adds a random slope, $(\beta_1+u_{1i})\,c_{ij}$ with $(u_{0i},u_{1i})\sim\mathcal N(\mathbf 0,\Sigma)$, so that each participant may have their own CFS--quality slope. It was also refitted after 1--99\% trimming and after replacing CFS with its within-participant rank. Models were fitted by REML.
 
 % -----------------------------------------------------------------
 \subsection{RIDL: Hierarchical Reinforcement-and-Imitation Diffusion Learning}
@@ -266,12 +236,7 @@ J(\theta)=\mathbb E_{\pi_\theta}\Big[\sum_{t=0}^{T}\gamma^{t}R_t\Big].
 \end{equation}
 RIDL obtains $\pi_\theta$ in two levels: imitation of the demonstrations (level~1), then reinforcement refinement on a CFS-weighted reward (level~2). The construction proceeds step by step.
 
-\paragraph*{Step 1: state.} The state at time $t$ is $s_t=(I_t,N_t)$:
-\begin{itemize}
-\item $I_t$ is the current endoscope frame.
-\item $N_t\in\mathbb R^{11\times8}$ is the kinematic history over the last eight steps (0.8\,s). Its 11 rows are the CFS $F_t$, the jerk optimality $O_t$ (Eq.~\ref{eq:opt}), and the last-step displacements $a_t-a_{t-1}$ of the nine logged quantities $a=(x,y,z,\mathrm{roll},\mathrm{pitch},\mathrm{yaw},f_x,f_y,f_z)$.
-\end{itemize}
-Every row is standardized, $\tilde n=(n-m)/s$, with means and standard deviations from the training participants only. The first step of a segment is padded with its own value. In the ``w/o CFS input'' ablation the $F_t$ row is set to zero.
+\paragraph*{Step 1: state.} The state at time $t$ is $s_t=(I_t,N_t)$, where $I_t$ is the current endoscope frame and $N_t\in\mathbb R^{11\times8}$ is the kinematic history over the last eight steps (0.8\,s). Its 11 rows are the CFS $F_t$, the jerk optimality $O_t$ (Eq.~\ref{eq:opt}), and the last-step displacements $a_t-a_{t-1}$ of the nine logged quantities $a=(x,y,z,\mathrm{roll},\mathrm{pitch},\mathrm{yaw},f_x,f_y,f_z)$. Every row is standardized, $\tilde n=(n-m)/s$, with means and standard deviations from the training participants only. The first step of a segment is padded with its own value. In the ``w/o CFS input'' ablation the $F_t$ row is set to zero.
 
 \paragraph*{Step 2: visual encoder (frozen diffusion prior).} The frame is resized to $64\times64$ and mapped to $[-1,1]$, and a zero channel is appended to match the four latent channels of Stable Diffusion~v1.5 \cite{rombach2022highresolution}:
 \begin{equation}\label{eq:unet}
@@ -318,86 +283,68 @@ a^*_t=\frac{a_{t+H}-a_t-m_a}{s_a},\qquad \hat p_{t+H}=p_t+\big(s_a\odot\mu_\thet
 \end{equation}
 with AdamW (learning rate $3\times10^{-4}$, weight decay $10^{-2}$, batch 64, 10 epochs per participant).
 
-\paragraph*{Reward.} At each step the agent samples $a_t\sim\pi_\theta(\cdot\mid s_t)$, and the reward is built in four parts.
-\begin{enumerate}
-\item \emph{Tracking kernel:} with $d=9$,
+\paragraph*{Reward.} At each step the agent samples $a_t\sim\pi_\theta(\cdot\mid s_t)$, and the reward is built in four parts. The first is a tracking kernel which, with $d=9$, is
 \begin{equation}\label{eq:track}
 k_t=\exp\!\Big(-\frac{\|a_t-a^*_t\|^{2}}{2\sigma_r^{2}d}\Big)\in(0,1],
 \end{equation}
-which equals 1 when the agent reproduces the demonstrated chunk and decays with the per-dimension squared error ($\sigma_r=0.5$ in standardized units).
-\item \emph{Engagement weight:}
+which equals 1 when the agent reproduces the demonstrated chunk and decays with the per-dimension squared error ($\sigma_r=0.5$ in standardized units). The second is the engagement weight,
 \begin{equation}\label{eq:weight}
 w_t=\tfrac12\,\mathrm{clip}\big(F_t/\bar F,\,0,\,2\big)\in[0,1],
 \end{equation}
-where $\bar F$ is the segment mean. A step taken at average engagement has $w_t=\tfrac12$, at twice the average $w_t=1$, and at zero engagement $w_t=0$.
-\item \emph{Smoothness term:}
+where $\bar F$ is the segment mean. A step taken at average engagement has $w_t=\tfrac12$, at twice the average $w_t=1$, and at zero engagement $w_t=0$. The third is a smoothness term,
 \begin{equation}\label{eq:smooth}
 \varsigma_t=\exp\!\Big(-\frac{\|a_t-a_{t-1}\|^{2}}{2d}\Big),
 \end{equation}
-which penalizes abrupt changes between consecutive actions, the agent-side analogue of the jerk optimality.
-\item \emph{Total reward:}
+which penalizes abrupt changes between consecutive actions, the agent-side analogue of the jerk optimality. The fourth combines them into the total reward,
 \begin{equation}\label{eq:reward}
 R_t=A\,w_t\,k_t+B\,\varsigma_t,\qquad A=1,\ B=0.1 .
 \end{equation}
-\end{enumerate}
 High-engagement moments of a demonstration therefore carry more weight, and in the ``w/o CFS-weighted reward'' ablation $w_t\equiv1$. The original RIDL reward, $R_t=A(1-|F_t-1|)+B\,O_t$, depended only on logged quantities and was returned irrespective of the agent's action, so it carried no learning signal; Eq.~\eqref{eq:reward} makes the reward depend on $a_t$.
 
-\paragraph*{Level 2: PPO refinement.} An episode is one demonstration segment. Because the next state is read from the demonstration, actions change the reward but not the state transition (a demonstration-replay setting). After a rollout of $T_s$ steps the refinement proceeds in five steps.
-\begin{enumerate}
-\item \emph{Temporal-difference residuals,} with $V_\psi(s_{T_s})=0$:
+\paragraph*{Level 2: PPO refinement.} An episode is one demonstration segment. Because the next state is read from the demonstration, actions change the reward but not the state transition (a demonstration-replay setting). After a rollout of $T_s$ steps the refinement proceeds in five steps. First, the temporal-difference residuals are computed, with $V_\psi(s_{T_s})=0$,
 \begin{equation}\label{eq:td}
 \delta_t=R_t+\gamma V_\psi(s_{t+1})-V_\psi(s_t).
 \end{equation}
-\item \emph{Generalized advantage estimation (GAE),} computed backwards in time, and the returns:
+Second, the advantages are obtained by generalized advantage estimation (GAE), computed backwards in time, together with the returns,
 \begin{equation}\label{eq:gae}
 \hat A_t=\sum_{l\ge0}(\gamma\lambda)^{l}\delta_{t+l}=\delta_t+\gamma\lambda\hat A_{t+1},\qquad \hat G_t=\hat A_t+V_\psi(s_t),
 \end{equation}
-with $\gamma=0.99$ and $\lambda=0.95$. The advantages are standardized within the rollout.
-\item \emph{Probability ratio:} with $\theta_{\mathrm{old}}$ the parameters that generated the rollout,
+with $\gamma=0.99$ and $\lambda=0.95$. The advantages are standardized within the rollout. Third, with $\theta_{\mathrm{old}}$ the parameters that generated the rollout, the probability ratio is
 \begin{equation}\label{eq:ratio}
 \rho_t(\theta)=\frac{\pi_\theta(a_t\mid s_t)}{\pi_{\theta_{\mathrm{old}}}(a_t\mid s_t)} .
 \end{equation}
-\item \emph{Clipped surrogate, value loss and entropy:}
+Fourth, the clipped surrogate objective, the value loss and the policy entropy are
 \begin{equation}\label{eq:clip}
 \mathcal L^{\mathrm{CLIP}}=\mathbb E_t\Big[\min\big(\rho_t\hat A_t,\ \mathrm{clip}(\rho_t,1-\epsilon,1+\epsilon)\,\hat A_t\big)\Big],\qquad \mathcal L^{V}=\mathbb E_t\big[(V_\psi(s_t)-\hat G_t)^{2}\big],
 \end{equation}
 \begin{equation}\label{eq:entropy}
 \mathcal H=\sum_{j=1}^{9}\tfrac12\log\!\big(2\pi e\,\sigma_j^{2}\big),
 \end{equation}
-where $\epsilon=0.2$ and $\mathcal H$ is the entropy of the Gaussian policy. The clip keeps the updated policy close to the one that collected the data.
-\item \emph{Combined loss,} minimized for 4 epochs over minibatches of 64:
+where $\epsilon=0.2$ and $\mathcal H$ is the entropy of the Gaussian policy. The clip keeps the updated policy close to the one that collected the data. Fifth, these terms are combined into the loss that is minimized for 4 epochs over minibatches of 64,
 \begin{equation}\label{eq:ppo}
 \mathcal L_{\mathrm{PPO}}=-\mathcal L^{\mathrm{CLIP}}+c_v\,\mathcal L^{V}-c_e\,\mathcal H,\qquad c_v=0.5,\ c_e=10^{-3},
 \end{equation}
 with AdamW (learning rate $10^{-4}$) and gradient-norm clipping at 0.5. Six PPO updates are run per participant \cite{Schulman2017,Larsen2021-gg}.
-\end{enumerate}
 
 \paragraph*{Subject curriculum.} The two levels are applied participant by participant: the parameters after participant $i$ initialize training on participant $i+1$, $\theta^{(i+1)}_0=\theta^{(i)}$. The ``pooled'' ablation instead trains once on all training participants together, with the same total number of PPO updates.
 
-\paragraph*{Evaluation.} The design is five subject-wise folds (two held-out participants each) $\times$ 2 seeds $\times$ 2 demonstration sources (VR or 2D). Every model is tested on both interfaces of the held-out participants. The metrics are computed step by step:
-\begin{enumerate}
-\item \emph{Position error} of the predicted 1\,s displacement, in millimetres:
+\paragraph*{Evaluation.} The design is five subject-wise folds (two held-out participants each) $\times$ 2 seeds $\times$ 2 demonstration sources (VR or 2D). Every model is tested on both interfaces of the held-out participants. The metrics are computed step by step. The basic quantity is the position error of the predicted 1\,s displacement, in millimetres,
 \begin{equation}\label{eq:err}
 r_t=1000\,\big\|\hat p_{t+H}-p_{t+H}\big\|_2 .
 \end{equation}
-\item \emph{Kalman smoothing.} As in the original RIDL evaluation, $r_t$ is smoothed with a one-dimensional Kalman filter under a random-walk model, $x_t=x_{t-1}+w_t$ and $r_t=x_t+v_t$, with $w_t\sim\mathcal N(0,Q)$ and $v_t\sim\mathcal N(0,R_v)$. With $Q=10^{-5}$, $R_v=0.1$, $\hat x_0=r_1$ and $P_0=1$, each step predicts and then updates:
+As in the original RIDL evaluation, $r_t$ is then smoothed with a one-dimensional Kalman filter under a random-walk model, $x_t=x_{t-1}+w_t$ and $r_t=x_t+v_t$, with $w_t\sim\mathcal N(0,Q)$ and $v_t\sim\mathcal N(0,R_v)$. With $Q=10^{-5}$, $R_v=0.1$, $\hat x_0=r_1$ and $P_0=1$, each step predicts and then updates:
 \begin{equation}\label{eq:kalman}
 P^-_t=P_{t-1}+Q,\qquad K_t=\frac{P^-_t}{P^-_t+R_v},\qquad \hat x_t=\hat x_{t-1}+K_t\,(r_t-\hat x_{t-1}),\qquad P_t=(1-K_t)P^-_t ,
 \end{equation}
-giving the smoothed residual $\tilde r_t=\hat x_t$. The gain $K_t$ sets how much each new residual moves the estimate.
-\item \emph{Trajectory error and volatility:}
+giving the smoothed residual $\tilde r_t=\hat x_t$. The gain $K_t$ sets how much each new residual moves the estimate. From the smoothed residual, the trajectory error and volatility are
 \begin{equation}\label{eq:etraj}
 E_{\mathrm{traj}}=\frac1T\sum_{t=1}^{T}\tilde r_t,\qquad \sigma_r=\sqrt{\frac1T\sum_{t=1}^{T}\big(\tilde r_t-E_{\mathrm{traj}}\big)^{2}},
 \end{equation}
-which measure, respectively, how far and how erratically the prediction deviates (Figure~\ref{fig:kalman}).
-\item \emph{Normalized MSE} over all nine action dimensions:
+which measure, respectively, how far and how erratically the prediction deviates (Figure~\ref{fig:kalman}). Accuracy over all nine action dimensions is measured by the normalized MSE,
 \begin{equation}\label{eq:nmse}
 \mathrm{NMSE}=\frac1{9T}\sum_{t=1}^{T}\|\mu_\theta(s_t)-a^*_t\|^{2},
 \end{equation}
-in standardized units, so position, orientation and force contribute equally.
-\item \emph{Reference predictors:} hold position, $\hat p_{t+H}=p_t$, and constant velocity, $\hat p_{t+H}=p_t+H\,(p_t-p_{t-1})$.
-\end{enumerate}
-Ablations remove one component at a time: the imitation prior (PPO from scratch), PPO refinement (BC only), the visual prior (no vision; raw pixels instead of SD-UNet features), CFS weighting of the reward ($w_t\equiv1$), CFS as state input, and the subject curriculum (pooled training). The checkpoints of the original RIDL implementation (one per interface and task, trained sequentially on participants 1--8 with the action-independent reward) were additionally re-assessed on participants 9 and 10, with targets normalized by training-set statistics so that their errors are comparable with the ablation. Sample efficiency was measured by evaluating held-out NMSE after every PPO update, for RIDL and for PPO from scratch, with an extended budget of 15 rollouts per participant.
+in standardized units, so position, orientation and force contribute equally. Two reference predictors without learning serve as baselines: hold position, $\hat p_{t+H}=p_t$, and constant velocity, $\hat p_{t+H}=p_t+H\,(p_t-p_{t-1})$. Ablations remove one component at a time: the imitation prior (PPO from scratch), PPO refinement (BC only), the visual prior (no vision; raw pixels instead of SD-UNet features), CFS weighting of the reward ($w_t\equiv1$), CFS as state input, and the subject curriculum (pooled training). The checkpoints of the original RIDL implementation (one per interface and task, trained sequentially on participants 1--8 with the action-independent reward) were additionally re-assessed on participants 9 and 10, with targets normalized by training-set statistics so that their errors are comparable with the ablation. Sample efficiency was measured by evaluating held-out NMSE after every PPO update, for RIDL and for PPO from scratch, with an extended budget of 15 rollouts per participant.
 
 \section{Results}
 The results are presented in the order of the study's questions. The first two subsections compare engagement and movement quality between the VR+haptics and 2D interfaces; the third examines whether engagement and movement quality are coupled from moment to moment; and the fourth inspects the LGAF maps of the decision-making network. The last three subsections report the RIDL ablation, the comparison of agents trained on VR and on 2D demonstrations, and the sample-efficiency analysis.
