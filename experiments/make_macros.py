@@ -104,11 +104,20 @@ if os.path.exists(tc):
             put(f"{k}Err", f"{x.err_mm.mean():.1f}"); put(f"{k}Nmse", f"{x.nmse.mean():.2f}")
     put("tBase", f"{t_.baseline_mean_pose_mm.mean():.1f}")
 
+lg = os.path.join(RESULTS, "lgaf_diag_stats.csv")
+if os.path.exists(lg):
+    L = pd.read_csv(lg)
+    put("lgafMaxDz", f"{L.dz.abs().max():.2f}"); put("lgafMinP", f"{L.p.min():.2f}")
+    w = os.path.join(RESULTS, "lgaf_subject_windows.csv")
+    if os.path.exists(w):
+        W = pd.read_csv(w).groupby(["subject", "cond", "high_cfs"]).n_windows.first().groupby(["subject", "cond"]).sum()
+        put("lgafWin", f"{W.mean():.0f}"); put("lgafWinTotal", f"{W.sum():.0f}")
+
 EXPECTED = [f"a{k}{m}" for k in ["Ridl", "Ppo", "Bc", "NoVis", "Pix", "NoFlowR", "NoCfsIn", "Pooled", "Hold", "CV"]
             for m in ["Err", "Ci", "Etraj", "Sig", "Nmse", "Steps", "N"]]
 EXPECTED += [f"d{k}{m}" for k in ["Ppo", "Bc", "NoVis", "Pix", "NoFlowR", "NoCfsIn", "Pooled", "Hold", "CV"] for m in ["", "P"]]
 EXPECTED += ["srcVR", "srcNVR", "srcDiff", "srcP", "srcTost", "srcCIlo", "srcCIhi",
-             "tBcErr", "tBcNmse", "tRidlErr", "tRidlNmse", "tBase", "cRidlFinal", "cPpoFinal", "cRidlFirst", "cSteps", "cPpoReach"]
+             "lgafMaxDz", "lgafMinP", "lgafWin", "lgafWinTotal", "tBcErr", "tBcNmse", "tRidlErr", "tRidlNmse", "tBase", "cRidlFinal", "cPpoFinal", "cRidlFirst", "cSteps", "cPpoReach"]
 for k in EXPECTED:
     M.setdefault(k, "\\textbf{TBD}")
 

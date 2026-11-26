@@ -39,10 +39,12 @@
 \maketitle
 % frontiers_suppmat.cls does not typeset \author/\address, so the block is set by hand.
 {\fontsize{11}{15}\selectfont\raggedright
-Nezih Nieto Guti\'errez$^{1,*}$, Alejandro Hern\'andez G\'omez$^{1}$, Gustavo De Los R\'ios Alatorre$^{1}$, Felipe de Jes\'us F\'elix Arredondo$^{1}$, Arturo Jos\'e Murra L\'opez$^{1}$ and Luis Alberto Mu\~noz Ubando$^{1}$\par}
+Nezih Nieto Guti\'errez$^{1,*}$, Alejandro Hern\'andez G\'omez$^{1}$, Gustavo De Los R\'ios Alatorre$^{1}$, Felipe de Jes\'us F\'elix Arredondo$^{3}$, Arturo Jos\'e Murra L\'opez$^{2}$ and Luis Alberto Mu\~noz Ubando$^{1}$\par}
 \smallskip
 {\small\raggedright
-$^{1}$Robotics and Intelligent Interaction Systems Group, Tecnol\'ogico de Monterrey, Monterrey, Mexico \TODO{confirm each co-author's affiliation}\par
+$^{1}$School of Engineering and Sciences, Tecnol\'ogico de Monterrey, Monterrey, Mexico\par
+$^{2}$University of Colorado Anschutz Medical Campus, Aurora, CO, USA\par
+$^{3}$Department of Research, Healthen Group \TODO{city, country; "Javier" is listed in this affiliation but is not in the author list}\par
 $^{*}$Correspondence: Nezih Nieto Guti\'errez, \url{nezih.nieto@tec.mx}\par}
 \medskip
 
@@ -95,6 +97,8 @@ F(t)=\frac{V_\beta}{V_\alpha}\cdot\frac{L_{\mathrm{oddball}}(t)}{L_{\mathrm{rest
 \end{equation}
 where $L_c(t)$ are LGAF-CNN class likelihoods for the participant's own EEG at 10\,Hz. Because the virtualized ratio $E$ is nearly constant within a session ($E=0.702$ in both conditions), the temporal dynamics of $F(t)$ are carried by the EEG-decoded task-engagement ratio.
 
+\paragraph*{LGAF maps of the decision-making network.} To show what the decoder sees, we computed LGAF maps for the nodes of the decision-making circuit (thesis Fig.~3.2) covered by the montage: core decision and goal maintenance (Fz), motor planning (C3, C4), parietal attention (CP1, CP2; nearest available sites to P3/P4) and visual input (O1, Oz, O2); FCz, FC1/2, Fp1/2 and F3/F4 were not recorded. For each node, the channel-averaged $\alpha$ (8--12\,Hz) and $\beta$ (13--30\,Hz) Hilbert envelopes were resampled to the 10\,Hz CFS timeline and cut into 64-step (6.4\,s) windows ($\approx$\lgafWin{} per participant and interface, \lgafWinTotal{} in total); each window was mapped with Eq.~(1) as a cross-field, $\mathrm{GADF}_{ij}=\sin(\phi^{\alpha}_i-\phi^{\beta}_j)$. Because the trained LGAF weights were not archived, maps use the identity initialization ($W_1=W_2=1$, $b=0$). The diagonal, $\sin(\phi^{\alpha}_t-\phi^{\beta}_t)$, is positive when $\beta$ power is relatively stronger than $\alpha$; we compared its mean between windows above and below each participant's median CFS (Figure~\ref{fig:lgaf}).
+
 \subsection{Behavioral Metrics}
 All metrics were computed from the 10\,Hz tool logs of Task~1 and Task~2 and averaged per participant and condition \cite{Varier2022,Chiu2021}:
 \begin{itemize}
@@ -124,7 +128,7 @@ with $A=1$, $B=0.1$, $\sigma=0.5$, $d=9$ and $\bar F$ the segment mean, so that 
 
 \paragraph*{Hierarchical training.} RIDL learns at two levels: (i) a \emph{skill prior} by behavior cloning (MSE, AdamW, 10 epochs) on a participant's demonstrations, then (ii) \emph{refinement} by PPO \cite{Schulman2017,Larsen2021-gg} on the reward above (clip $\epsilon=0.2$, GAE $\gamma=0.99$, $\lambda=0.95$, 6 rollouts per participant, 4 epochs). The two levels are applied participant by participant, each initialized from the previous participant's weights (subject curriculum).
 
-\paragraph*{Evaluation.} Five subject-wise folds (two held-out participants each) $\times$ 2 seeds $\times$ 2 demonstration sources (VR or 2D). Every model is tested on both interfaces of the held-out participants. The primary metric is the 3D position error of the predicted 1\,s displacement, $r_t=\|\hat p_{t+10}-p_{t+10}\|_2$ (mm); we also report its Kalman-smoothed mean $E_{\mathrm{traj}}$, its volatility $\sigma_r$, and the normalized MSE over all nine action dimensions. Reference points are a hold-position baseline ($\hat a=0$) and a constant-velocity extrapolation. Ablations remove one component at a time: imitation prior (PPO from scratch), PPO refinement (BC only), visual prior (no vision; raw pixels instead of SD-UNet features), CFS weighting of the reward, CFS as state input, and the subject curriculum (pooled training). The thesis checkpoints (one per interface and task, trained sequentially through participant~7, \texttt{ds8}) were additionally re-assessed on participants 8 and 9 with training-set normalization. Sample efficiency was measured by evaluating held-out error after every PPO update for RIDL and for PPO from scratch with an extended budget (15 rollouts per participant).
+\paragraph*{Evaluation.} Five subject-wise folds (two held-out participants each) $\times$ 2 seeds $\times$ 2 demonstration sources (VR or 2D). Every model is tested on both interfaces of the held-out participants. The primary metric is the 3D position error of the predicted 1\,s displacement, $r_t=\|\hat p_{t+10}-p_{t+10}\|_2$ (mm); we also report its Kalman-smoothed mean $E_{\mathrm{traj}}$ and its volatility $\sigma_r$ (Figure~\ref{fig:kalman}), and the normalized MSE over all nine action dimensions. Reference points are a hold-position baseline ($\hat a=0$) and a constant-velocity extrapolation. Ablations remove one component at a time: imitation prior (PPO from scratch), PPO refinement (BC only), visual prior (no vision; raw pixels instead of SD-UNet features), CFS weighting of the reward, CFS as state input, and the subject curriculum (pooled training). The thesis checkpoints (one per interface and task, trained sequentially through participant~7, \texttt{ds8}) were additionally re-assessed on participants 8 and 9 with training-set normalization. Sample efficiency was measured by evaluating held-out error after every PPO update for RIDL and for PPO from scratch with an extended budget (15 rollouts per participant).
 
 % =================================================================
 \section{Results}
@@ -137,6 +141,9 @@ Jerk optimality (VR \hOptVR{} vs.\ 2D \hOptNVR{}, $p\hOptP$, BF$_{01}=\hOptBF$) 
 
 \subsection{Moment-to-Moment Engagement Tracks Movement Optimality}
 Across \mmN{} five-second windows, higher CFS predicted higher jerk optimality ($\beta=\mmBeta$\,SD per SD, SE $=\mmSE$, $p\mmP$; Figure~\ref{fig:cfs}, bottom) with no CFS$\times$interface interaction ($p\mmInterP$), so the coupling was the same in VR and 2D. The association was heterogeneous across participants: with by-subject random slopes it was $\beta=\mmRsBeta$ ($p\mmRsP$), after 1--99\% trimming $\beta=\mmTrimBeta$ ($p\mmTrimP$), and on within-subject ranks $\beta=\mmRankBeta$ ($p\mmRankP$). Above-median CFS windows had higher optimality in \msNup{} of 10 participants (\msHi{} vs.\ \msLo{}, $d_z=\msDz$, $p\msP$). CFS did not predict LDLJ ($\beta=\mmLdljBeta$, $p\mmLdljP$) or micro-deviation ($\beta=\mmMicroBeta$, $p\mmMicroP$).
+
+\subsection{LGAF Maps of the Decision-Making Network}
+Group-averaged LGAF maps were dominated by negative values in every node and both interfaces (Figure~\ref{fig:lgaf}), i.e.\ $\alpha$ envelopes ranked higher than $\beta$ within most windows. Splitting windows at each participant's median CFS did not change the $\alpha$--$\beta$ diagonal in any node or interface (all $|d_z|\le\lgafMaxDz$, all $p\ge\lgafMinP$), and high-minus-low difference maps showed no structure consistent across nodes. The engagement signal carried by CFS therefore stems from the LGAF-CNN's learned decision boundary rather than from a simple $\alpha$/$\beta$ shift in any single node of the network.
 
 \subsection{RIDL Ablation}
 The original thesis checkpoints, trained sequentially on participants 0--7 and re-assessed with the corrected metric on participants 8 and 9, predicted an almost constant tool pose: position error was \tBcErr{}\,mm after imitation and \tRidlErr{}\,mm after PPO fine-tuning, against \tBase{}\,mm for always predicting the training-mean pose. This motivated the action-dependent reward and action-chunk formulation evaluated below.
@@ -199,16 +206,23 @@ The authors declare no commercial or financial relationships that could be const
 
 \begin{figure}[h!]
 \centering
-\figfile{fig_human_paired.pdf}{0.9}
-\caption{\textbf{Participant-level comparison of VR+haptics and 2D/no-haptics.} Lines connect the same participant; black bars are means. Panel titles give $d_z$ and paired-$t$ $p$ values (uncorrected; see text for Holm-corrected values and equivalence tests).}
-\label{fig:paired}
+\figfile{fig_lgaf_maps.pdf}{1.0}
+\caption{\textbf{LGAF maps of the decision-making network.} Rows: nodes of the decision-making circuit covered by the montage. Columns: group-averaged maps $\mathrm{GADF}_{ij}=\sin(\phi^{\alpha}_i-\phi^{\beta}_j)$ over 64-step (6.4\,s) windows of the $\alpha$ and $\beta$ envelopes, for windows above (high CFS) and below (low CFS) each participant's median CFS, and their difference, in VR+haptics and 2D. Positive values (red) mean $\beta$ ranks above $\alpha$. Annotations give the high$-$low difference of the diagonal and its paired $p$ value. Maps use the LGAF transform at identity initialization because the trained weights were not archived.}
+\label{fig:lgaf}
 \end{figure}
 
 \begin{figure}[h!]
 \centering
-\figfile{fig3_ridl.pdf}{0.98}
-\caption{\textbf{RIDL architecture and hierarchical training.} (A) Agent integration with the AMBF dVRK simulation: perception, environment data and the imitation ($\mathcal{L}_I$), diffusion ($\mathcal{L}_D$) and reward ($\mathcal{L}_R$) terms driving policy updates. (B) Per-participant hierarchical loop: imitation pre-training of RIDLPolicy with the frozen Stable-Diffusion UNet (level~1), PPO refinement (level~2), and weights carried to the next participant (subject curriculum).}
+\figfile{fig3_architecture.pdf}{1.0}
+\caption{\textbf{Multimodal integration and RIDL architecture.} (1) Three sensing streams: the trainee views the endoscope scene (VR headset or monitor), teleoperates through the Novint Falcon (pose out, force back) and wears 8-channel dry EEG; UWIST/ARSQ questionnaires are collected per session. (2) Per-stream processing: frames are timestamped and resized, kinematics are merged on 0.1\,s timestamps and turned into jerk optimality $O_t$ and displacement history $\Delta a_t$, and EEG passes through the LGAF decoder, whose $L_{\mathrm{oddball}}/L_{\mathrm{rest}}$ ratio is scaled by the virtualized $V_\beta/V_\alpha$ to give CFS$(t)$; all streams are aligned into one 10\,Hz demonstration stream. (3) RIDLPolicy: a frozen Stable-Diffusion UNet encodes the frame, a Conv1D--Transformer encodes the 11-channel history of CFS, $O_t$ and $\Delta a_t$, and the summed 512-d embeddings feed Gaussian policy and value heads. (4) Hierarchical learning: behavior cloning on the operator's 1\,s displacements (level~1) initializes PPO on a reward weighted by CFS (level~2), repeated over participants 0--7; agents are evaluated on participants 8--9 with Kalman-filtered residuals. CFS therefore enters twice: as a state input and as the reward weight. The dashed path marks the future closed neuroadaptive loop.}
 \label{fig:ridl}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\figfile{fig_human_paired.pdf}{0.9}
+\caption{\textbf{Participant-level comparison of VR+haptics and 2D/no-haptics.} Lines connect the same participant; black bars are means. Panel titles give $d_z$ and paired-$t$ $p$ values (uncorrected; see text for Holm-corrected values and equivalence tests).}
+\label{fig:paired}
 \end{figure}
 
 \begin{figure}[h!]
@@ -230,16 +244,16 @@ The authors declare no commercial or financial relationships that could be const
 
 \begin{figure}[h!]
 \centering
-\figfile{fig_learning_curves.pdf}{0.55}
-\caption{\textbf{Sample efficiency.} Held-out normalized MSE vs.\ PPO environment steps for RIDL (imitation prior + PPO) and PPO from scratch (mean $\pm$ 95\% CI).}
-\label{fig:curves}
+\figfile{fig_kalman_VR_fold4.pdf}{1.0}
+\caption{\textbf{Kalman-filtered residuals.} (Left) For one held-out participant in each interface, the raw residual $r_t=\|\hat x_{t+10}-x_{t+10}\|$ (thin) and its Kalman-smoothed version $\tilde r_t$ (bold, $\pm\sigma_r$ band) for RIDL and PPO from scratch; legend values give $E_{\mathrm{traj}}$ and $\sigma_r$. (Right) Error--volatility plane: $E_{\mathrm{traj}}$ vs.\ $\sigma_r$ for every run of every ablation variant and baseline.}
+\label{fig:kalman}
 \end{figure}
 
 \begin{figure}[h!]
 \centering
-\figfile{fig_lgaf_confusion.pdf}{0.45}
-\caption{\textbf{LGAF-CNN confusion matrix on Nencki--Symfonia} (window counts).}
-\label{fig:lgaf}
+\figfile{fig_learning_curves.pdf}{0.55}
+\caption{\textbf{Sample efficiency.} Held-out normalized MSE vs.\ PPO environment steps for RIDL (imitation prior + PPO) and PPO from scratch (mean $\pm$ 95\% CI).}
+\label{fig:curves}
 \end{figure}
 
 \clearpage
@@ -265,19 +279,20 @@ The authors declare no commercial or financial relationships that could be const
 
 \begin{table}[h!]
 \centering
-\caption{\textbf{LGAF-CNN classification on Nencki--Symfonia} (held-out windows), the decoder providing $L_{\mathrm{oddball}}/L_{\mathrm{rest}}$.}
+\caption{\textbf{LGAF-CNN classification on Nencki--Symfonia} (held-out windows): confusion matrix (counts; rows = true class) and per-class metrics. The decoder provides $L_{\mathrm{oddball}}/L_{\mathrm{rest}}$ for CFS.}
 \vspace{0.5em}
-\begin{tabular}{lcccc}
+\begin{tabular}{lccc|cccc}
 \toprule
-\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
+& \multicolumn{3}{c|}{\textbf{Predicted}} & & & & \\
+\textbf{True class} & rest & oddball & msit & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
 \midrule
-rest & 0.77 & 0.51 & 0.61 & 18,350 \\
-oddball & 0.69 & 0.80 & 0.74 & 34,034 \\
-msit & 0.69 & 0.72 & 0.71 & 35,469 \\
+rest    & \textbf{9,292} & 3,917 & 5,141 & 0.77 & 0.51 & 0.61 & 18,350 \\
+oddball & 802 & \textbf{27,153} & 6,079 & 0.69 & 0.80 & 0.74 & 34,034 \\
+msit    & 1,916 & 8,009 & \textbf{25,544} & 0.69 & 0.72 & 0.71 & 35,469 \\
 \midrule
-accuracy & & & 0.71 & 87,853 \\
-macro avg & 0.72 & 0.67 & 0.69 & 87,853 \\
-weighted avg & 0.71 & 0.71 & 0.70 & 87,853 \\
+accuracy & & & & & & 0.71 & 87,853 \\
+macro avg & & & & 0.72 & 0.67 & 0.69 & 87,853 \\
+weighted avg & & & & 0.71 & 0.71 & 0.70 & 87,853 \\
 \bottomrule
 \end{tabular}
 \label{tab:lgaf_class}

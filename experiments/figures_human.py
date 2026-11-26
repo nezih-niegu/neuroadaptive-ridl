@@ -146,6 +146,43 @@ def fig_confusion():
     save(fig, "fig_lgaf_confusion")
 
 
+
+
+def fig_lgaf_maps():
+    """LGAF (GADF) maps of the decision-making network nodes, high vs low CFS windows."""
+    from lgaf_maps import NODES
+    Z = np.load(os.path.join(RESULTS, "lgaf_maps.npz"))
+    st = pd.read_csv(os.path.join(RESULTS, "lgaf_diag_stats.csv"))
+    cols = [("VR", "high"), ("VR", "low"), ("VR", "diff"), ("NVR", "high"), ("NVR", "low"), ("NVR", "diff")]
+    head = {"high": "high CFS", "low": "low CFS", "diff": "high − low"}
+    titles = [f"{'VR + haptics' if c == 'VR' else '2D'} · {head[k]}" for c, k in cols]
+    fig = make_subplots(rows=len(NODES), cols=6, subplot_titles=titles + [""] * (6 * (len(NODES) - 1)),
+                        horizontal_spacing=0.012, vertical_spacing=0.035)
+    vmax = max(np.abs(Z[f"{c}|{n}|{k}"]).max() for c in ("VR", "NVR") for n in NODES for k in ("high", "low"))
+    dmax = max(np.abs(Z[f"{c}|{n}|high"] - Z[f"{c}|{n}|low"]).max() for c in ("VR", "NVR") for n in NODES)
+    for r, node in enumerate(NODES, start=1):
+        for j, (c, k) in enumerate(cols, start=1):
+            m = Z[f"{c}|{node}|high"] - Z[f"{c}|{node}|low"] if k == "diff" else Z[f"{c}|{node}|{k}"]
+            fig.add_trace(go.Heatmap(z=m, coloraxis="coloraxis2" if k == "diff" else "coloraxis"), row=r, col=j)
+            if k == "diff":
+                q = st[(st.cond == c) & (st.node == node)].iloc[0]
+                fig.add_annotation(x=0.5, y=-0.06, xref=f"x{(r - 1) * 6 + j} domain", yref=f"y{(r - 1) * 6 + j} domain",
+                                   text=f"diag Δ = {q['diff']:+.3f}, p = {q.p:.2f}", showarrow=False, font=dict(size=11))
+        fig.add_annotation(x=-0.006, y=1 - (r - 0.5) / len(NODES), xref="paper", yref="paper", xanchor="right",
+                           text=f"<b>{node.split(' (')[0]}</b><br>({node.split(' (')[1]}", showarrow=False,
+                           font=dict(size=13), align="right")
+    fig.update_xaxes(showticklabels=False, showgrid=False); fig.update_yaxes(showticklabels=False, showgrid=False,
+                                                                             autorange="reversed", scaleanchor=None)
+    style(fig, "LGAF maps of the decision-making network · GADF<sub>ij</sub> = sin(φ<sup>α</sup><sub>i</sub> − "
+               "φ<sup>β</sup><sub>j</sub>), 64 × 6.4 s windows", width=1700, height=1150)
+    fig.update_layout(margin=dict(l=230, r=40, t=110, b=40),
+                      coloraxis=dict(colorscale="RdBu_r", cmin=-vmax, cmax=vmax,
+                                     colorbar=dict(title="GADF", x=1.0, len=0.45, y=0.77)),
+                      coloraxis2=dict(colorscale="PuOr_r", cmin=-dmax, cmax=dmax,
+                                      colorbar=dict(title="Δ (high − low)", x=1.0, len=0.45, y=0.25)))
+    save(fig, "fig_lgaf_maps", scale=2)
+
+
 if __name__ == "__main__":
     fig_setup()
     fig_ridl()
@@ -153,4 +190,5 @@ if __name__ == "__main__":
     fig_paired()
     fig_cfs_quality()
     fig_confusion()
+    fig_lgaf_maps()
     print("ok")

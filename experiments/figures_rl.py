@@ -174,10 +174,62 @@ def fig_curves(tag="curves"):
     save(fig, "fig_learning_curves")
 
 
+# ------------------------------------------------------------------ Kalman residuals
+def _kalman(z, q=1e-5, r=0.1):
+    x, P, out = z[0], 1.0, []
+    for v in z:
+        P += q; K = P / (P + r); x += K * (v - x); P *= (1 - K); out.append(x)
+    return np.array(out)
+
+
+def fig_kalman(src="VR", fold=4, ridl_v="RIDL (full)", ppo_v="PPO from scratch", tag="ablation", subject=None):
+    """Raw residual r_t = ||x_hat - x||, Kalman-smoothed r~_t (thesis Sec. 4.5.2) and the
+    E_traj / sigma_r plane over all runs."""
+    ridl, ppo = np.load(tfile(ridl_v, src, fold)), np.load(tfile(ppo_v, src, fold))
+    keys = sorted({k.rsplit("__", 1)[0] for k in ridl.files if "Task1" in k})
+    subj = subject or keys[0].split("-")[0]
+    keys = [k for k in keys if k.startswith(subj + "-")][:2]
+    fig = make_subplots(rows=2, cols=2, column_widths=[0.64, 0.36], horizontal_spacing=0.08, vertical_spacing=0.12,
+                        specs=[[{}, {"rowspan": 2}], [{}, None]],
+                        subplot_titles=[keys[0].replace("_", " · ") + " (held-out)", "Error vs volatility (all runs)",
+                                        keys[1].replace("_", " · ") + " (held-out)" if len(keys) > 1 else ""])
+    for r, k in enumerate(keys, start=1):
+        for arr, col, name, fill in ((ppo, "#EF553B", "PPO from scratch", "rgba(239,85,59,0.15)"),
+                                     (ridl, VR, "RIDL", "rgba(99,110,250,0.18)")):
+            e = arr[k + "__err"]; kf = _kalman(e); sd = np.sqrt(((kf - kf.mean()) ** 2).mean()); t = np.arange(len(e))
+            fig.add_trace(go.Scatter(x=np.r_[t, t[::-1]], y=np.r_[kf + sd, (kf - sd).clip(0)[::-1]], fill="toself",
+                                     fillcolor=fill, line=dict(width=0), hoverinfo="skip", showlegend=False), row=r, col=1)
+            fig.add_trace(go.Scatter(x=t, y=e, mode="lines", line=dict(color=col, width=1), opacity=0.35,
+                                     name=f"{name}: raw r<sub>t</sub>", showlegend=r == 1), row=r, col=1)
+            fig.add_trace(go.Scatter(x=t, y=kf, mode="lines", line=dict(color=col, width=3),
+                                     name=f"{name}: Kalman r̃<sub>t</sub> (E<sub>traj</sub> {kf.mean():.1f} mm, "
+                                          f"σ<sub>r</sub> {sd:.1f})" if r == 1 else f"{name} r̃", showlegend=r == 1),
+                          row=r, col=1)
+        fig.update_yaxes(title_text="residual (mm)", row=r, col=1)
+    fig.update_xaxes(title_text="Step (0.1 s)", row=2, col=1)
+    f = os.path.join(RESULTS, f"{tag}.csv")
+    if os.path.exists(f):
+        run = pd.read_csv(f).groupby(["variant", "source", "fold", "seed"])[["E_traj", "sigma_r"]].mean().reset_index()
+        palette = ["#636EFA", "#EF553B", "#00CC96", "#AB63FA", "#FFA15A", "#19D3F3", "#FF6692", "#B6E880", "#9e9e9e",
+                   "#555555", "#bbbbbb"]
+        for v, col in zip([o for o in ORDER if o in set(run.variant)], palette):
+            d = run[run.variant == v]
+            fig.add_trace(go.Scatter(x=d.E_traj, y=d.sigma_r, mode="markers", name=v,
+                                     marker=dict(color=col, size=9 if v == "RIDL (full)" else 6,
+                                                 symbol="diamond" if "baseline" in v else "circle",
+                                                 line=dict(width=1, color="white")), legendgroup="plane"), row=1, col=2)
+        fig.update_xaxes(title_text="E<sub>traj</sub> (mm)", row=1, col=2)
+        fig.update_yaxes(title_text="σ<sub>r</sub> (mm)", row=1, col=2)
+    style(fig, "Kalman-filtered residuals on held-out participants", width=1500, height=820)
+    fig.update_layout(legend=dict(orientation="h", y=-0.12, x=0.0, font=dict(size=11)))
+    save(fig, f"fig_kalman_{src}_fold{fold}")
+
+
 if __name__ == "__main__":
     print(fig_ablation())
     print(fig_crossdomain())
     fig_curves()
     for src in ("VR", "NVR"):
         fig_vis2(src, 4)
+    fig_kalman("VR", 4)
     gif_vis2("VR", 4)
