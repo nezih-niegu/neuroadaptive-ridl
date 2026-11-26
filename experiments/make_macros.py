@@ -93,6 +93,8 @@ if os.path.exists(cs):
     put("cRidlFinal", f"{c['ridl_final']:.3f}"); put("cPpoFinal", f"{c['ppo_final']:.3f}")
     put("cRidlFirst", f"{c['ridl_after_first_update']:.3f}"); put("cSteps", f"{c['total_steps']:,}")
     put("cPpoReach", f"{100 * c['ppo_reached_frac']:.0f}")
+    cc = json.load(open(os.path.join(RESULTS, "curves.json")))["PPO from scratch"]
+    put("cPpoFirst", f"{np.mean([r[0]['test_nmse'] for r in cc]):.3f}")
 
 tc = os.path.join(RESULTS, "thesis_ckpts.csv")
 if os.path.exists(tc):
@@ -153,7 +155,7 @@ lines.append("\\midrule")
 lines.append("Mean (SD) & " + " & ".join(
     f"{m_[(a, c)]:.{k}f} ({sd_[(a, c)]:.{k}f})" for a, k in (("cfs", 2), ("path_efficiency", 2), ("optimality", 3), ("ldlj", 2))
     for c in ("VR", "NVR")) + " \\\\")
-open(os.path.join(PAPER, "table_subjects.tex"), "w").write(SUBJ_HEAD + "\n".join(lines) + TAIL)
+open(os.path.join(ROOT, "frontiers_paper", "table_subjects.tex"), "w").write(SUBJ_HEAD + "\n".join(lines) + TAIL)
 
 rows = ["\\multicolumn{6}{c}{\\TODO{ablation results pending (run\\_all.sh)}} \\\\"]
 if os.path.exists(abl):
@@ -162,5 +164,5 @@ if os.path.exists(abl):
         steps = "--" if s.loc[v, "env_steps"] == 0 else f"{s.loc[v, 'env_steps']:,.0f}"
         rows.append(f"{v} & {s.loc[v,'err_mm']:.2f} $\\pm$ {s.loc[v,'err_mm_ci']:.2f} & {s.loc[v,'E_traj']:.2f} & "
                     f"{s.loc[v,'sigma_r']:.2f} & {s.loc[v,'nmse']:.3f} & {steps} \\\\")
-open(os.path.join(PAPER, "table_ablation.tex"), "w").write(ABL_HEAD + "\n".join(rows) + TAIL)
+open(os.path.join(ROOT, "frontiers_paper", "table_ablation.tex"), "w").write(ABL_HEAD + "\n".join(rows) + TAIL)
 print("tables written")

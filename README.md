@@ -26,7 +26,26 @@ During each session we recorded 8-channel dry EEG, tool kinematics and endoscope
 | Path efficiency | 0.36 | 0.26 | d_z = 0.76, p = 0.04 uncorrected (n.s. after Holm) |
 | CFS → optimality (5 s windows) | | | β = 0.11, p = 0.007 (random intercept); p = 0.12 with random slopes |
 
-Immersion produced no measurable cognitive or motor cost, and moment-to-moment engagement tracked movement optimality in both interfaces. VR always preceded 2D, so condition order was not counterbalanced; treat this as a pilot. RIDL ablation results are written to `results/ablation_summary.csv` and `paper/results_macros.tex` by `run_all.sh`.
+Immersion produced no measurable cognitive or motor cost, and moment-to-moment engagement tracked movement optimality in both interfaces. VR always preceded 2D, so condition order was not counterbalanced; treat this as a pilot. Full numbers are written to `results/ablation_summary.csv` and `paper/results_macros.tex` by `run_all.sh`.
+
+## Key results (RIDL ablation)
+
+5 subject folds × 2 demonstration sources × 2 seeds = 20 runs per variant; error = held-out 3D position error of the 1 s displacement (mean ± 95% CI); Δ = variant − RIDL, Wilcoxon signed-rank.
+
+| Variant | Error (mm) | Δ vs RIDL |
+|---|---|---|
+| RIDL (BC → PPO, full) | 13.79 ± 3.18 | |
+| BC only | 10.68 ± 3.92 | −3.11 (p = 0.001) |
+| PPO from scratch | 15.33 ± 1.93 | +1.54 (p = 0.26) |
+| w/o SD-UNet (no vision) | 8.42 ± 1.14 | −5.37 (p < 0.001) |
+| Raw pixels (no SD prior) | 15.00 ± 2.00 | +1.22 (p = 0.11) |
+| w/o CFS-weighted reward | 13.68 ± 1.53 | −0.11 (p = 0.45) |
+| w/o CFS state input | 13.63 ± 3.44 | −0.16 (p = 0.52) |
+| Pooled (no curriculum) | 14.05 ± 1.97 | +0.26 (p = 0.43) |
+| Constant-velocity baseline | 11.85 ± 2.57 | −1.93 (p = 0.77) |
+| Hold-position baseline | 4.93 ± 0.98 | −8.85 (p = 0.002) |
+
+This is a negative result. In the demonstration-replay setting, where actions change the reward but not the next state, no learned policy beat holding the current pose. PPO degraded the imitation prior, the frozen SD features did not beat raw pixels or no vision, and the CFS reward weight and CFS input had no detectable effect. Agents trained on VR and 2D demonstrations did not differ (12.19 vs 15.39 mm, p = 0.35), but equivalence was not established. Testing a CFS-weighted reward properly needs a closed-loop simulator.
 
 ## Repository layout
 

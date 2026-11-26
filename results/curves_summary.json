@@ -1,0 +1,8 @@
+{
+ "ridl_after_first_update": 5.369854509830475,
+ "ridl_final": 5.080404315888882,
+ "ppo_final": 6.392025792598725,
+ "ppo_steps_to_ridl_final": 317.6,
+ "ppo_reached_frac": 1.0,
+ "total_steps": 36900
+}

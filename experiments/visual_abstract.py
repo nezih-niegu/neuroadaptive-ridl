@@ -165,7 +165,7 @@ def main():
          f"• movement quality <b>equivalent</b> (±10%,<br>   TOST p &lt; {max(teq.values()) if max(teq.values()) > 0.001 else 0.001:g})<br>"
          f"• CFS <b>tracks motor control</b> (β = {o_['beta']:.2f})<br>"
          f"• LGAF node maps: no node-specific<br>   effect (all |d<sub>z</sub>| ≤ {mx:.2f}, pilot power)<br><br>"
-         "<b>→</b> CFS is fed to RIDL as state + reward<br>   weight: a neuroadaptive learning signal",
+         "<b>→</b> CFS fed to RIDL as state + reward weight:<br>   no effect under demonstration replay;<br>   no agent beat the hold baseline",
          size=13.2)
 
     # ---------------- pipeline strip
@@ -225,7 +225,7 @@ def main():
     if has_abl:
         s = pd.read_csv(abl, index_col=0)
         keep = [v for v in ["Hold-position baseline", "w/o flow-weighted reward", "w/o CFS state input",
-                            "Raw pixels (no SD prior)", "PPO from scratch", "BC only", "RIDL (full)"] if v in s.index]
+                            "Raw pixels (no SD prior)", "w/o SD-UNet (no vision)", "PPO from scratch", "BC only", "RIDL (full)"] if v in s.index]
         s = s.loc[keep]
         fig.add_trace(go.Bar(y=list(s.index), x=s.err_mm, orientation="h",
                              marker_color=["#FFA15A" if v == "RIDL (full)" else (GRAY if "baseline" in v else "#ffd0ab")

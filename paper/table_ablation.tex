@@ -2,6 +2,15 @@
 \toprule
 \textbf{Variant} & \textbf{Error (mm)} & $\bm{E_{\mathrm{traj}}}$ & $\bm{\sigma_r}$ & \textbf{NMSE} & \textbf{Steps} \\
 \midrule
-\multicolumn{6}{c}{\TODO{ablation results pending (run\_all.sh)}} \\
+RIDL (full) & 13.79 $\pm$ 3.18 & 13.57 & 2.13 & 4.359 & 14,826 \\
+PPO from scratch & 15.33 $\pm$ 1.93 & 15.17 & 1.96 & 4.050 & 14,826 \\
+BC only & 10.68 $\pm$ 3.92 & 10.38 & 2.20 & 3.851 & -- \\
+w/o SD-UNet (no vision) & 8.42 $\pm$ 1.14 & 8.20 & 2.03 & 2.457 & 14,826 \\
+Raw pixels (no SD prior) & 15.00 $\pm$ 2.00 & 14.83 & 2.50 & 3.758 & 14,826 \\
+w/o flow-weighted reward & 13.68 $\pm$ 1.53 & 13.46 & 2.08 & 4.322 & 14,826 \\
+w/o CFS state input & 13.63 $\pm$ 3.44 & 13.44 & 2.06 & 4.561 & 14,826 \\
+Pooled (no curriculum) & 14.05 $\pm$ 1.97 & 13.76 & 2.15 & 3.678 & 14,865 \\
+Constant-velocity baseline & 11.85 $\pm$ 2.57 & 11.15 & 6.73 & 152.087 & -- \\
+Hold-position baseline & 4.93 $\pm$ 0.98 & 4.54 & 2.37 & 2.093 & -- \\
 \bottomrule
 \end{tabular}
