@@ -121,10 +121,17 @@ def fig_paired():
                                      textfont=dict(size=10, color="#777"),
                                      marker=dict(size=10, color="rgba(90,90,90,0.55)",
                                                  symbol=["triangle-left" if v < XL else "triangle-right" for v in dx])))
-        fig.add_trace(go.Scatter(x=[mu], y=[y], mode="markers", showlegend=i == 0, name="mean difference ± 90% CI",
+        # 95% CI (significance) as a thin whisker under the thick 90% CI (TOST)
+        from scipy import stats as _st
+        h95 = (hi - lo) / 2 / _st.t.ppf(0.95, 9) * _st.t.ppf(0.975, 9)
+        fig.add_trace(go.Scatter(x=[mu - h95, mu + h95], y=[y, y], mode="lines", showlegend=i == 0,
+                                 name="95% CI (significance)", line=dict(color=col, width=1.4)))
+        fig.add_trace(go.Scatter(x=[mu - h95, mu - h95, None, mu + h95, mu + h95], y=[y - .08, y + .08, None, y - .08, y + .08],
+                                 mode="lines", showlegend=False, line=dict(color=col, width=1.4)))
+        fig.add_trace(go.Scatter(x=[mu], y=[y], mode="markers", showlegend=i == 0, name="mean difference ± 90% CI (equivalence test)",
                                  marker=dict(size=16, color=col, symbol="diamond", line=dict(color="white", width=1.5)),
                                  error_x=dict(type="data", symmetric=False, array=[hi - mu], arrayminus=[mu - lo],
-                                              thickness=3, width=8, color=col)))
+                                              thickness=5, width=0, color=col)))
         fig.add_annotation(x=1.0, xref="paper", xanchor="left", y=y, text=f"  {verdict}", showarrow=False,
                            font=dict(size=13, color=col if col != GRAY else "#666"))
         y_lab.append((y, f"<b>{lab}</b><br><sup>d<sub>z</sub> = {t.dz:.2f}</sup>"))
