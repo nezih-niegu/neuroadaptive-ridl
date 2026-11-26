@@ -5,6 +5,11 @@
 set -eu
 cd "$(dirname "$0")"
 command -v pdflatex >/dev/null || { echo "pdflatex not found - install TeX Live first (see header)"; exit 1; }
+# logo1.eps -> PDF (what epstopdf would do); ghostscript fallback when epstopdf is absent
+if [ ! -f logo1-eps-converted-to.pdf ] && ! command -v epstopdf >/dev/null; then
+  ps2pdf -dEPSCrop logo1.eps logo1-eps-converted-to.pdf
+fi
+rm -f manuscript.aux manuscript.bbl manuscript.blg   # stale .bbl breaks the first pass
 run() { pdflatex -interaction=nonstopmode -halt-on-error -shell-escape manuscript.tex > /dev/null || {
         echo "pdflatex failed; first errors:"; grep -n -A3 "^!" manuscript.log | head -30; exit 1; }; }
 run
