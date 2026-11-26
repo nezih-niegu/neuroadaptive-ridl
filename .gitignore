@@ -1,0 +1,24 @@
+# raw data, caches and weights are not distributed
+data/
+cache/
+checkpoints/
+*.pth
+*.pt
+*.npz
+*.npy
+results/trajectories/
+results/*.log
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+# latex
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+paper/*.pdf
