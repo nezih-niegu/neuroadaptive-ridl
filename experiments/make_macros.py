@@ -94,11 +94,21 @@ if os.path.exists(cs):
     put("cRidlFirst", f"{c['ridl_after_first_update']:.3f}"); put("cSteps", f"{c['total_steps']:,}")
     put("cPpoReach", f"{100 * c['ppo_reached_frac']:.0f}")
 
+tc = os.path.join(RESULTS, "thesis_ckpts.csv")
+if os.path.exists(tc):
+    t_ = pd.read_csv(tc)
+    g = t_.groupby("model")
+    for mname, k in (("Thesis BC (imitation)", "tBc"), ("Thesis RIDL (BC→PPO)", "tRidl")):
+        if mname in g.groups:
+            x = g.get_group(mname)
+            put(f"{k}Err", f"{x.err_mm.mean():.1f}"); put(f"{k}Nmse", f"{x.nmse.mean():.2f}")
+    put("tBase", f"{t_.baseline_mean_pose_mm.mean():.1f}")
+
 EXPECTED = [f"a{k}{m}" for k in ["Ridl", "Ppo", "Bc", "NoVis", "Pix", "NoFlowR", "NoCfsIn", "Pooled", "Hold", "CV"]
             for m in ["Err", "Ci", "Etraj", "Sig", "Nmse", "Steps", "N"]]
 EXPECTED += [f"d{k}{m}" for k in ["Ppo", "Bc", "NoVis", "Pix", "NoFlowR", "NoCfsIn", "Pooled", "Hold", "CV"] for m in ["", "P"]]
 EXPECTED += ["srcVR", "srcNVR", "srcDiff", "srcP", "srcTost", "srcCIlo", "srcCIhi",
-             "cRidlFinal", "cPpoFinal", "cRidlFirst", "cSteps", "cPpoReach"]
+             "tBcErr", "tBcNmse", "tRidlErr", "tRidlNmse", "tBase", "cRidlFinal", "cPpoFinal", "cRidlFirst", "cSteps", "cPpoReach"]
 for k in EXPECTED:
     M.setdefault(k, "\\textbf{TBD}")
 

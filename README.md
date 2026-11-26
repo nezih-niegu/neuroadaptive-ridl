@@ -41,6 +41,7 @@ experiments/     Frontiers analyses: every number in the paper comes from here
   figures_human.py          RGB flow/optimality trajectories, paired plots, CFS–quality
   figures_rl.py             vis2-style trajectory panels + GIF, ablation bars, cross-domain matrix
   visual_abstract.py        docs/visual_abstract.png
+  eval_thesis_ckpts.py      re-assesses the thesis checkpoints on never-seen subjects 8-9
   make_macros.py            paper/results_macros.tex + LaTeX tables (no hand-typed numbers)
   run_all.sh                end-to-end reproduction
 thesis/          legacy real-time PPO-vs-RIDL viewers (see thesis/README.md for known issues)
@@ -52,9 +53,12 @@ results/         derived, anonymized results (CSV / JSON)
 
 ## Setup
 
+The project is managed with [uv](https://docs.astral.sh/uv/) (Python 3.12, locked in `uv.lock`):
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync                          # core: analyses, RIDL, figures
+uv sync --extra viewer           # + VisPy/GLFW for the legacy thesis viewers
+uv sync --extra notebooks        # + JupyterLab for notebooks/
 ```
 
 CPU is sufficient; a GPU only speeds up feature extraction. The Stable-Diffusion v1.5 UNet is downloaded from the Hugging Face hub on first use. If a thesis checkpoint is placed at `checkpoints/ridl_policy_ppo_ds1.pth`, its frozen UNet weights are used instead.
@@ -76,20 +80,21 @@ The derived, anonymized results used in the paper are in `results/`.
 
 ```bash
 cd experiments
-PYTHON=python THREADS=16 ./run_all.sh     # ~10 h on a 22-core CPU, mostly the UNet feature pass
+THREADS=16 ./run_all.sh          # ~10 h on a 22-core CPU, mostly the UNet feature pass
 ```
 
 Individual steps:
 
 ```bash
-python human_analysis.py && python figures_human.py   # human-data statistics and figures (minutes)
-python extract_unet_features.py                       # frozen SD-UNet cache
-python ridl_ablation.py --seeds 2                     # ablation grid
-python ridl_ablation.py --curves                      # sample-efficiency curves
-python figures_rl.py && python make_macros.py && python visual_abstract.py
+uv run python human_analysis.py && uv run python figures_human.py   # human-data statistics and figures (minutes)
+uv run python extract_unet_features.py                              # frozen SD-UNet cache
+uv run python ridl_ablation.py --seeds 2                            # ablation grid
+uv run python ridl_ablation.py --curves                             # sample-efficiency curves
+uv run python eval_thesis_ckpts.py --ckpt-root <thesis folder>      # thesis checkpoints, held-out subjects 8-9
+uv run python figures_rl.py && uv run python make_macros.py && uv run python visual_abstract.py
 ```
 
-Compile the paper from `paper/` with `pdflatex manuscript && bibtex manuscript && pdflatex manuscript && pdflatex manuscript`. Figures are read from `../figures/`.
+Compile the paper with `paper/build.sh` (pdfLaTeX + BibTeX, as on Overleaf; needs `texlive-latex-extra texlive-science texlive-fonts-recommended`). Figures are read from `../figures/`.
 
 ## Differences from the thesis implementation
 

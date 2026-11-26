@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Full reproduction: human analyses -> UNet feature cache -> RIDL ablation ->
 # learning curves -> figures -> paper macros -> visual abstract.
-# Usage:  PYTHON=python THREADS=16 ./run_all.sh      (from experiments/)
+# Usage:  THREADS=16 ./run_all.sh      (from experiments/; uses `uv run` unless PYTHON is set)
 set -u
 cd "$(dirname "$0")"
-PY=${PYTHON:-python}
+PY=${PYTHON:-uv run python}
 TH=${THREADS:-16}
 mkdir -p ../results
 log() { echo "[$(date '+%F %T')] $*" | tee -a ../results/run_all.log; }

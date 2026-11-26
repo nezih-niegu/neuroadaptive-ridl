@@ -18,6 +18,7 @@ Known issues that the Frontiers analyses in `../experiments/` correct:
 Usage (requires the raw data and thesis checkpoints, which are not distributed):
 
 ```bash
-python thesis/realtime_compare_vispy.py --csv <session.csv> --image-dir <frames/> \
+uv sync --extra viewer
+uv run python thesis/realtime_compare_vispy.py --csv <session.csv> --image-dir <frames/> \
     --ppo-model <ppo.pth> --ridl-model <ridl.pth> --device cpu
 ```
